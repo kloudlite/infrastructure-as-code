@@ -9,7 +9,7 @@ resource "aws_key_pair" "k3s_nodes_ssh_key" {
 }
 
 resource "null_resource" "save_ssh_key_if_ssh_enabled" {
-  count = (!var.disable_ssh && length(var.save_ssh_key_as) == true) ? 1 : 0
+  count    = (!var.disable_ssh && length(var.save_ssh_key_as) == true) ? 1 : 0
   triggers = {
     ssh_key = tls_private_key.ssh_key.private_key_pem
   }
@@ -34,9 +34,57 @@ locals {
       instance_name     = "${var.worker_nodes_config["name"]}-${i}"
       instance_type     = var.worker_nodes_config["instance_type"]
       ami               = var.worker_nodes_config["ami"]
-      availability_zone = var.master_nodes_config.availability_zones[(tonumber(i) - 1) % length(var.master_nodes_config.availability_zones)]
+      availability_zone = var.worker_nodes_config.availability_zones[(tonumber(i) - 1) % length(var.worker_nodes_config.availability_zones)]
     }
   ]
+
+  storage_nodes_config = [
+    for i in range(1, var.storage_nodes_config["count"] + 1) : {
+      instance_name     = "${var.storage_nodes_config["name"]}-${i}"
+      instance_type     = var.storage_nodes_config["instance_type"]
+      ami               = var.storage_nodes_config["ami"]
+      availability_zone = var.storage_nodes_config.availability_zones[(tonumber(i) - 1) % length(var.storage_nodes_config.availability_zones)]
+    }
+  ]
+
+  storage_ebs_volumes1 = [
+    for i in range(1, var.storage_nodes_config["count"] + 1) : {
+      volume_name       = "${var.storage_nodes_config["name"]}-ebs-volume-${i}"
+      availability_zone = var.storage_nodes_config.availability_zones[(tonumber(i) - 1) % length(var.storage_nodes_config.availability_zones)]
+      device_path       = "/dev/sdf"
+    }
+  ]
+
+   storage_ebs_volumes2 = [
+     for i in range(1, var.storage_nodes_config["count"] + 1) : {
+       volume_name       = "${var.storage_nodes_config["name"]}-ebs-volume-${length(local.storage_ebs_volumes1) + i}"
+       availability_zone = var.storage_nodes_config.availability_zones[(tonumber(i) - 1) % length(var.storage_nodes_config.availability_zones)]
+       device_path       = "/dev/sdg"
+     }
+   ]
+
+  volume_mount_name_suffix          = split("", "fghijklmnop")
+  number_of_mounts_per_storage_node = 2
+
+  storage_disk_volume_size_in_GBs = 100
+  default_disks_config = jsonencode([
+    {
+      name = "nvme-disk-1",
+      path = "/dev/nvme1n1",
+      allowScheduling = true,
+      storageReserved = (local.storage_disk_volume_size_in_GBs/10) * 1024 * 1024 * 1024, // size in Bytes, converted from GB
+      diskType = "block",
+      tags = ["nvme", "ssd", "fast"]
+    },
+    {
+      name = "nvme-disk-2",
+      path = "/dev/nvme2n1",
+      allowScheduling = true,
+      diskType  =  "block",
+      storageReserved = (local.storage_disk_volume_size_in_GBs/10) * 1024 * 1024 * 1024, // size in Bytes, converted from GB
+      tags = ["nvme", "ssd", "fast"]
+    }
+  ])
 }
 
 resource "aws_security_group" "sg" {
@@ -248,7 +296,7 @@ resource "ssh_resource" "grab_k8s_config" {
 }
 
 resource "aws_instance" "k3s_secondary_masters" {
-  for_each          = { for idx, config in local.master_config : idx => config if idx >= 1 }
+  for_each          = {for idx, config in local.master_config : idx => config if idx >= 1}
   ami               = var.master_nodes_config["ami"]
   instance_type     = each.value.instance_type
   security_groups   = [aws_security_group.sg.name]
@@ -269,7 +317,7 @@ resource "aws_instance" "k3s_secondary_masters" {
 }
 
 resource "null_resource" "setup_k3s_on_secondary_masters" {
-  for_each          = { for idx, config in local.master_config : idx => config if idx >= 1 }
+  for_each = {for idx, config in local.master_config : idx => config if idx >= 1}
 
   connection {
     type        = "ssh"
@@ -304,7 +352,7 @@ resource "null_resource" "setup_k3s_on_secondary_masters" {
 }
 
 resource "aws_instance" "k3s_agents" {
-  for_each          = { for idx, config in local.worker_config : idx => config }
+  for_each          = {for idx, config in local.worker_config : idx => config}
   ami               = var.worker_nodes_config["ami"]
   instance_type     = each.value.instance_type
   security_groups   = [aws_security_group.sg.name]
@@ -312,7 +360,7 @@ resource "aws_instance" "k3s_agents" {
   key_name          = aws_key_pair.k3s_nodes_ssh_key.key_name
 
   tags = {
-    Name = each.value.instance_name
+    Name      = each.value.instance_name
     Terraform = true
   }
 
@@ -325,7 +373,7 @@ resource "aws_instance" "k3s_agents" {
 }
 
 resource "null_resource" "setup_k3s_on_agents" {
-  for_each = { for idx, config in local.worker_config : idx => config }
+  for_each = {for idx, config in local.worker_config : idx => config}
   connection {
     type        = "ssh"
     user        = "ubuntu"
@@ -356,3 +404,117 @@ resource "null_resource" "setup_k3s_on_agents" {
   }
 }
 
+resource "aws_ebs_volume" "storage_volumes" {
+  for_each          = {for idx, config in concat(local.storage_ebs_volumes1, local.storage_ebs_volumes2) : idx => config}
+  availability_zone = each.value.availability_zone
+  size              = 100
+  type              = "gp2"
+  encrypted         = false
+  tags              = {
+    Name      = each.value.volume_name
+    Terraform = true
+  }
+}
+
+resource "aws_instance" "storage_nodes" {
+  for_each          = {for idx, config in local.storage_nodes_config : idx => config}
+  ami               = var.storage_nodes_config["ami"]
+  instance_type     = each.value.instance_type
+  security_groups   = [aws_security_group.sg.name]
+  availability_zone = each.value.availability_zone
+  key_name          = aws_key_pair.k3s_nodes_ssh_key.key_name
+
+  tags = {
+    Name      = each.value.instance_name
+    Terraform = true
+  }
+
+  root_block_device {
+    volume_size = 30
+    volume_type = "standard"
+    encrypted   = false
+    # kms_key_id  = data.aws_kms_key.customer_master_key.arn
+  }
+}
+
+resource "aws_volume_attachment" "storage_volumes_attachment1" {
+  for_each    = {for idx, config in local.storage_ebs_volumes1 : idx => config}
+  device_name = each.value.device_path
+  volume_id   = aws_ebs_volume.longhorn_ebs_volumes[tonumber(each.key)].id
+  instance_id = aws_instance.storage_nodes[tonumber(each.key)].id
+}
+#
+resource "aws_volume_attachment" "storage_volumes_attachment2" {
+  for_each    = {for idx, config in local.storage_ebs_volumes2 : idx => config}
+  device_name = each.value.device_path
+  volume_id   = aws_ebs_volume.longhorn_ebs_volumes[length(local.storage_ebs_volumes1) + tonumber(each.key)].id
+  instance_id = aws_instance.storage_nodes[tonumber(each.key)].id
+}
+
+resource "null_resource" "setup_k3s_agent_on_storage_nodes" {
+  for_each = {for idx, config in local.storage_nodes_config : idx => config}
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    host        = aws_instance.storage_nodes[tonumber(each.key)].public_ip
+    private_key = tls_private_key.ssh_key.private_key_pem
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      <<-EOC
+        cat >runner-config.yml <<EOF2
+        runAs: agent
+        agent:
+          publicIP: ${aws_instance.storage_nodes[tonumber(each.key)].public_ip}
+          serverIP: ${var.domain}
+          token: ${random_password.k3s_token.result}
+          nodeName: ${each.value.instance_name}
+          labels:
+            kloudlite.io/storage-node: "true"
+            node.longhorn.io/create-default-disk: 'config'
+          taints:
+            - kloudlite.io/storage-node=true:NoExecute
+        EOF2
+
+        sudo ln -sf $PWD/runner-config.yml /runner-config.yml
+        if [ "${var.disable_ssh}" == "true" ]; then
+          sudo systemctl disable sshd.service
+          sudo systemctl stop sshd.service
+          sudo rm -f ~/.ssh/authorized_keys
+        fi
+      EOC
+    ]
+  }
+}
+
+resource  "null_resource" "annotate_all_storage_nodes_with_disk_config" {
+  for_each = {for idx, config in local.storage_nodes_config : idx => config}
+  depends_on = [
+    null_resource.setup_k3s_agent_on_storage_nodes
+  ]
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    host        = aws_instance.k3s_primary_master.public_ip
+    private_key = tls_private_key.ssh_key.private_key_pem
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      <<-EOC
+      while true; do
+        lines=$(sudo k3s kubectl get nodes/${each.value.instance_name} | wc -l)
+        if [ "$lines" -ne 2 ]; then
+          echo "node ${each.value.instance_name} is not attached yet, retrying in 1s ..."
+          sleep 1
+          continue
+        fi
+        echo "node ${each.value.instance_name} is attached now, annotating it with default disks config"
+        break
+      done
+      sudo k3s kubectl annotate --overwrite nodes/${each.value.instance_name} node.longhorn.io/default-disks-config='${local.default_disks_config}'
+      EOC
+    ]
+  }
+}

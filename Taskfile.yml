@@ -200,3 +200,13 @@ tasks:
           --destroy
           --out "{{.PlanOutput}}"
       - terraform apply "{{.PlanOutput}}"
+
+  tf:download:kubeconfig:dev:
+    vars:
+      AuthToken: "{{.TF_TOKEN_app_terraform_io}}"
+      # WorkspaceId: "${TF_CLOUD_DEV_WORKSPACE_ID}"
+      WorkspaceId: "{{.TF_CLOUD_DEV_WORKSPACE_ID}}"
+    cmds:
+      - |+
+        curl --silent -H "Authorization: Bearer {{.AuthToken}}" 'https://app.terraform.io/api/v2/workspaces/{{.WorkspaceId}}/current-state-version?include=outputs' | jq '.included[] | select(.attributes.name == "kubeconfig") | .attributes.value' -r | base64 -d
+
