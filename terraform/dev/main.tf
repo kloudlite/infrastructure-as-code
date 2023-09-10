@@ -11,6 +11,15 @@ variable "aws_ami" { default = "ami-0f78219c8292792d9" }
 variable "aws_instance_type" { default = "c6a.large" }
 variable "aws_region_availability_zones" { default = ["ap-south-1a", "ap-south-1b", "ap-south-1c"] }
 
+module "k3s-primary-master" {
+  source = "../modules/k3s-primary-master"
+
+  node_name     = ""
+  public_domain = ""
+  public_ip     = ""
+  ssh_params    = {}
+}
+
 module "k3s-HA-on-ec2" {
   source = "../modules/k3s-HA-on-ec2"
 
@@ -31,63 +40,68 @@ module "k3s-HA-on-ec2" {
   }
 
   storage_volumes_config = {
-    "ap-south-1a" = {
-      "volume-1" : {},
-      "volume-2" : {},
+    "ap-south-1a/volume-1" = {
+      mount_path = "/mnt/volume-1"
     },
-    "ap-south-1b" = {
-      "volume-1" : {},
-      "volume-2" : {},
-    },
-    "ap-south-1c" = {
-      "volume-1" : {},
-      "volume-2" : {},
+    "ap-south-1a/volume-2" = {
+      mount_path = "/mnt/volume-2"
     },
 
-#    "ap-south-1a" = {
-#      "volume-1" : {
-#        "size" = 100,
-#        "type" = "gp2"
-#        "iops" = 1000,
-#      },
-#      "volume-2" : {
-#        "size" = 100,
-#        "type" = "gp2"
-#        "iops" = 1000,
-#      },
-#    },
-#    "ap-south-1b" = {
-#      "volume-1" : {
-#        "size" = 100,
-#        "type" = "gp2"
-#        "iops" = 1000,
-#      },
-#      "volume-2" : {
-#        "size" = 100,
-#        "type" = "gp2"
-#        "iops" = 1000,
-#      },
-#    },
-#    "ap-south-1c" = {
-#      "volume-1" : {
-#        "size" = 100,
-#        "type" = "gp2"
-#        "iops" = 1000,
-#      },
-#      "volume-2" : {
-#        "size" = 100,
-#        "type" = "gp2"
-#        "iops" = 1000,
-#      },
-#    }
+    "ap-south-1b/volume-1" = {
+      mount_path = "/mnt/volume-1"
+    },
+    "ap-south-1b/volume-2" = {
+      mount_path = "/mnt/volume-2"
+    },
+
+    "ap-south-1c/volume-1" = {
+      mount_path = "/mnt/volume-1"
+    },
+    "ap-south-1c/volume-2" = {
+      mount_path = "/mnt/volume-2"
+    },
+  }
+
+  availitilityZone = {
+    name =  ""
+    masterNodes = {
+      "adadf": {
+      },
+
+      "adadf": {
+      },
+
+      "adadf": {
+      },
+    },
+    workerNodes = {},
+    volumes = {},
+    storageNodes= [
+      {
+        name = ""
+        instance_type = ""
+        ami = ""
+        availability_zone = ""
+        attached_volumes = ["volume-name-1", "volume-name-2"]
+      }
+    ]
   }
 
   storage_nodes_config = {
-    name               = "kloudlite-dev-storage-worker",
-    count              = 4,
-    instance_type      = var.aws_instance_type
-    ami                = var.aws_ami
-    availability_zones = [var.aws_region_availability_zones[0]]
+    "k8s-dev-storage-worker-1" = {
+      instance_type      = var.aws_instance_type
+      ami                = var.aws_ami
+      availability_zone = var.aws_region_availability_zones[0]
+      attached_volumes = [
+        "ap-south-1a/volume-1",
+        "ap-south-1a/volume-2",
+      ]
+    },
+#    name               = "kloudlite-dev-storage-worker",
+#    count              = 4,
+#    instance_type      = var.aws_instance_type
+#    ami                = var.aws_ami
+#    availability_zones = [var.aws_region_availability_zones[0]]
   }
 
   domain = var.cloudflare_domain

@@ -210,3 +210,43 @@ tasks:
       - |+
         curl --silent -H "Authorization: Bearer {{.AuthToken}}" 'https://app.terraform.io/api/v2/workspaces/{{.WorkspaceId}}/current-state-version?include=outputs' | jq '.included[] | select(.attributes.name == "kubeconfig") | .attributes.value' -r | base64 -d
 
+  tf:local:test:init:
+    dir: ./terraform/test
+    cmds:
+      - terraform init
+
+  tf:local:test:plan:
+    dir: ./terraform/test
+    vars:
+      PlanOutput: "/tmp/terraform/test/plan.out"
+    cmds:
+      - mkdir -p $(dirname "{{.PlanOutput}}")
+      - terraform plan
+          --var aws_access_key="${AWS_ACCESS_KEY_ID}"
+          --var aws_secret_key="${AWS_SECRET_ACCESS_KEY}"
+          --var cloudflare_api_token="${CLOUDFLARE_API_TOKEN}"
+          --out "{{.PlanOutput}}"
+
+  tf:local:test:apply:
+    dir: ./terraform/test
+    vars:
+      PlanOutput: "/tmp/terraform/test/plan.out"
+    dotenv:
+      - .secrets/env
+    cmds:
+      - terraform apply "{{.PlanOutput}}"
+
+  tf:local:test:destroy:
+    dir: ./terraform/test
+    vars:
+      PlanOutput: "/tmp/terraform/test/plan.destroy.out"
+    dotenv:
+      - .secrets/env
+    cmds:
+      - terraform plan
+          --var aws_access_key="${AWS_ACCESS_KEY_ID}"
+          --var aws_secret_key="${AWS_SECRET_ACCESS_KEY}"
+          --var cloudflare_api_token="${CLOUDFLARE_API_TOKEN}"
+          --destroy
+          --out "{{.PlanOutput}}"
+      - terraform apply "{{.PlanOutput}}"
