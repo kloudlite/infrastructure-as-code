@@ -26,6 +26,11 @@ resource "null_resource" "setup_k3s_on_agents" {
         sudo systemctl stop sshd.service
         sudo rm -f ~/.ssh/authorized_keys
       fi
+
+      if [ "${var.use_cloudflare_nameserver}" = "true" ]; then
+        lineNo=$(sudo cat /etc/resolv.conf -n | grep "nameserver" | awk '{print $1}')
+        sudo bash -c 'sed -i "$lineNo i nameserver 1.1.1.1" /etc/resolv.conf'
+      fi
       EOC
     ]
   }

@@ -10,7 +10,7 @@ resource "null_resource" "setup_k3s_on_secondary_masters" {
   provisioner "remote-exec" {
     inline = [
       <<-EOC
-      cat > runner-config.yml <<EOF2
+      cat > runner-config.yml<<EOF2
       runAs: secondaryMaster
       secondaryMaster:
         publicIP: ${each.value.public_ip}

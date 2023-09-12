@@ -6,14 +6,3 @@ terraform {
     }
   }
 }
-
-resource "local_file" "kubeconfig" {
-  content = base64decode(var.kubeconfig)
-  filename = "/tmp/kubeconfig"
-}
-
-provider "helm" {
-  kubernetes {
-    config_path = local_file.kubeconfig
-  }
-}

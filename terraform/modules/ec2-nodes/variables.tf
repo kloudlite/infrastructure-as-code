@@ -25,5 +25,6 @@ variable "nodes_config" {
     az = string
     root_volume_size  = number
     root_volume_type  = string // standard, gp2, io1, gp3 etc
+    with_elastic_ip = bool
   }))
 }

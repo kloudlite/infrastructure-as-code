@@ -125,7 +125,7 @@ resource "aws_iam_instance_profile" "full_s3_and_block_storage" {
 }
 
 resource "aws_instance" "ec2_instances" {
-  for_each          = { for idx, config in var.nodes_config : idx => config }
+  for_each          = {for idx, config in var.nodes_config : idx => config}
   ami               = var.ami
   instance_type     = each.value.instance_type
   security_groups   = [aws_security_group.sg.name]
@@ -147,3 +147,19 @@ resource "aws_instance" "ec2_instances" {
   }
 }
 
+locals {
+  nodes_with_elastic_ips = {
+    for node_name, node_cfg in var.nodes_config : node_name => node_cfg
+    if node_cfg.with_elastic_ip == true
+  }
+}
+
+resource "aws_eip" "elastic_ips" {
+  for_each = local.nodes_with_elastic_ips
+}
+
+resource "aws_eip_association" "k3s_masters_elastic_ips_association" {
+  for_each      = local.nodes_with_elastic_ips
+  instance_id   = aws_instance.ec2_instances[each.key].id
+  allocation_id = aws_eip.elastic_ips[each.key].id
+}

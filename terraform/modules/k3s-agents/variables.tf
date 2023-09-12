@@ -26,3 +26,7 @@ variable "disable_ssh" {
   default     = true
 }
 
+variable "use_cloudflare_nameserver" {
+  description = "use cloudflare nameserver: 1.1.1.1"
+  default     = false
+}

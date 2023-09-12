@@ -1,26 +1,15 @@
-variable "aws_access_key" { type = string }
-variable "aws_secret_key" { type = string }
-
-variable "aws_region" { default = "ap-south-1" }
-variable "aws_ami" { default = "ami-0f78219c8292792d9" }
-
-variable "cloudflare_api_token" { type = string }
-
-variable "cloudflare_domain" { default = "dev2.kloudlite.io" }
-variable "cloudflare_zone_id" { default = "67f645257a633bd1eb1091facfafba04" }
-
 locals {
-  default_master_nodes_config = {
-    instance_type    = "c6a.large"
-    root_volume_size = 40
-    root_volume_type = "gp3"
-  }
-
-  default_worker_nodes_config = {
-    instance_type    = "c6a.large"
-    root_volume_size = 50
-    root_volume_type = "gp3"
-  }
+  #  default_master_nodes_config = {
+  #    instance_type    = "c6a.large"
+  #    root_volume_size = 40
+  #    root_volume_type = "gp3"
+  #  }
+  #
+  #  default_worker_nodes_config = {
+  #    instance_type    = "c6a.large"
+  #    root_volume_size = 50
+  #    root_volume_type = "gp3"
+  #  }
 
   k3s_node_labels = {
     "kloudlite.io/cloud-provider.name" : "aws",
@@ -29,18 +18,33 @@ locals {
 
   k3s_node_label_az = "kloudlite.io/cloud-provider.az"
 
-  nodes = {
-    "master-1" : merge({ az = "ap-south-1a", role = "primary" }, local.default_master_nodes_config),
-    "master-2" : merge({ az = "ap-south-1b", role = "secondary" }, local.default_master_nodes_config),
-    "master-3" : merge({ az = "ap-south-1c", role = "secondary" }, local.default_master_nodes_config),
+  #  nodes = {
+  #    "master-1" : merge({ az = "ap-south-1a", role = "primary" }, local.default_master_nodes_config),
+  #    "master-2" : merge({ az = "ap-south-1b", role = "secondary" }, local.default_master_nodes_config),
+  #    "master-3" : merge({ az = "ap-south-1c", role = "secondary" }, local.default_master_nodes_config),
+  #
+  #    "worker-1" : merge({ az = "ap-south-1b", role = "agent" }, local.default_worker_nodes_config),
+  #  }
 
-    "worker-1" : merge({ az = "ap-south-1b", role = "agent" }, local.default_worker_nodes_config),
+  primary_master_nodes = {
+    for node_name, node_cfg in var.nodes_config : node_name => node_cfg if node_cfg.role == "primary-master"
   }
+  secondary_master_nodes = {
+    for node_name, node_cfg in var.nodes_config : node_name => node_cfg if node_cfg.role == "secondary-master"
+  }
+  agent_nodes = {for node_name, node_cfg in var.nodes_config : node_name => node_cfg if node_cfg.role == "agent"}
+}
 
-  primary_master_node_name = "master-1"
-  primary_master_node      = local.nodes[local.primary_master_node_name]
-  secondary_master_nodes   = { for node_name, node_cfg in local.nodes : node_name => node_cfg if node_cfg.role == "secondary"}
-  agent_nodes              = { for node_name, node_cfg in local.nodes : node_name => node_cfg if node_cfg.role == "agent"}
+check "single_master" {
+  assert {
+    condition     = length(local.primary_master_nodes) == 1
+    error_message = "only one primary master node is allowed"
+  }
+}
+
+locals {
+  primary_master_node_name = keys(local.primary_master_nodes)[0]
+  primary_master_node      = local.primary_master_nodes[local.primary_master_node_name]
 }
 
 module "ec2-nodes" {
@@ -53,7 +57,7 @@ module "ec2-nodes" {
   ami        = var.aws_ami
   aws_region = var.aws_region
 
-  nodes_config = local.nodes
+  nodes_config = var.nodes_config
 }
 
 module "k3s-primary-master" {
@@ -66,7 +70,10 @@ module "k3s-primary-master" {
     user        = "ubuntu",
     private_key = module.ec2-nodes.ssh_private_key
   }
-  node_labels = merge({ "kloudlite.io/cloud-provider.az" : local.primary_master_node.az }, local.k3s_node_labels)
+  node_labels = merge({
+    "kloudlite.io/cloud-provider.az" : local.primary_master_node.az
+  }, local.k3s_node_labels)
+  use_cloudflare_nameserver = true
 }
 
 module "k3s-secondary-master" {
@@ -75,6 +82,8 @@ module "k3s-secondary-master" {
   k3s_token                = module.k3s-primary-master.k3s_token
   primary_master_public_ip = module.k3s-primary-master.public_ip
   public_domain            = var.cloudflare_domain
+
+  depends_on = [module.k3s-primary-master]
 
   secondary_masters = {
     for node_name, node_cfg in local.secondary_master_nodes : node_name => {
@@ -86,30 +95,6 @@ module "k3s-secondary-master" {
       node_labels = merge({ "kloudlite.io/cloud-provider.az" : node_cfg.az }, local.k3s_node_labels)
     }
   }
-
-  #  secondary_masters2 = {
-  #    "master-2" : {
-  #      public_ip  = module.ec2-nodes.ec2_instances["master-2"].public_ip
-  #      ssh_params = {
-  #        user        = "ubuntu"
-  #        private_key = module.ec2-nodes.ssh_private_key
-  #      }
-  #      node_labels = concat(local.k3s_node_labels,
-  #        [format(local.k3s_node_label_az, module.ec2-nodes.ec2_instances["master-2"].az)]
-  #      )
-  #    },
-  #
-  #    "master-3" : {
-  #      public_ip  = module.ec2-nodes.ec2_instances["master-3"].public_ip
-  #      ssh_params = {
-  #        user        = "ubuntu"
-  #        private_key = module.ec2-nodes.ssh_private_key
-  #      }
-  #      node_labels = concat(local.k3s_node_labels,
-  #        [format(local.k3s_node_label_az, module.ec2-nodes.ec2_instances["master-2"].az)]
-  #      )
-  #    }
-  #  }
 }
 
 module "k3s-agents" {
@@ -122,37 +107,16 @@ module "k3s-agents" {
         user        = "ubuntu"
         private_key = module.ec2-nodes.ssh_private_key
       }
-      node_labels = merge({ "kloudlite.io/cloud-provider.az" : node_cfg.az}, local.k3s_node_labels)
+      depends_on  = [module.k3s-primary-master]
+      node_labels = merge({ "kloudlite.io/cloud-provider.az" : node_cfg.az }, local.k3s_node_labels)
     }
   }
 
-#  agent_nodes = {
-#    for node_name, node_cfg in local.nodes : node_name => {
-#      public_ip  = module.ec2-nodes.ec2_instances_ips[node_name]
-#      ssh_params = {
-#        user        = "ubuntu"
-#        private_key = module.ec2-nodes.ssh_private_key
-#      }
-#      node_labels = merge({
-#        "kloudlite.io/cloud-provider.az" : module.ec2-nodes.ec2_instances["master-1"].az
-#      }, local.k3s_node_labels)
-#    } if node_cfg.role == "agent"
-#  }
+  use_cloudflare_nameserver = true
 
-  #  agent_nodes2 = {
-  #    "worker-1" : {
-  #      public_ip  = module.ec2-nodes.ec2_instances_ips["worker-1"]
-  #      ssh_params = {
-  #        user        = "ubuntu"
-  #        private_key = module.ec2-nodes.ssh_private_key
-  #      }
-  #      node_labels = concat(local.k3s_node_labels,
-  #        [format(local.k3s_node_label_az, module.ec2-nodes.ec2_instances_azs["worker-1"])]
-  #      )
-  #    }
-  #  }
-
-  k3s_server_host = module.k3s-primary-master.public_ip
+  #  k3s_server_host = module.k3s-primary-master.public_ip
+  #  k3s_server_host = aws_eip.k3s_masters_elastic_ips[local.primary_master_node_name].public_ip
+  k3s_server_host = var.cloudflare_domain
   k3s_token       = module.k3s-primary-master.k3s_token
 }
 
@@ -161,7 +125,7 @@ output "ec2_instances" {
 }
 
 output "kubeconfig" {
-  value = module.k3s-primary-master.kubeconfig
+  value = module.k3s-primary-master.kubeconfig_with_public_host
 }
 
 module "cloudflare-dns" {
@@ -171,9 +135,32 @@ module "cloudflare-dns" {
   cloudflare_domain    = var.cloudflare_domain
   cloudflare_zone_id   = var.cloudflare_zone_id
 
-  public_ips = concat(
-    [module.ec2-nodes.ec2_instances[local.primary_master_node_name].public_ip],
-    [for node_name, node_cfg in local.secondary_master_nodes : module.ec2-nodes.ec2_instances[node_name].public_ip],
-  )
+  public_ips = [
+    for node_name, v in merge(local.primary_master_nodes, local.secondary_master_nodes) :
+    module.ec2-nodes.ec2_instances[node_name].public_ip
+  ]
 }
 
+resource "time_sleep" "sleep_before_applying_helm" {
+  create_duration = "1m"
+  depends_on = [module.k3s-primary-master]
+}
+
+module "helm-aws-ebs-csi" {
+  providers = {
+    helm = helm
+  }
+  source     = "../modules/helm-aws-ebs-csi"
+  kubeconfig = module.k3s-primary-master.kubeconfig_with_public_ip
+  depends_on = [time_sleep.sleep_before_applying_helm]
+  storage_classes = {
+    "sc-xfs" : {
+      volume_type = "gp3"
+      fs_type     = "xfs"
+    },
+    "sc-ext4" : {
+      volume_type = "gp3"
+      fs_type     = "ext4"
+    },
+  }
+}

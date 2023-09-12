@@ -219,12 +219,12 @@ tasks:
     dir: ./terraform/test
     vars:
       PlanOutput: "/tmp/terraform/test/plan.out"
+      Varsfile: ../../.secrets/test/varfile.json
     cmds:
       - mkdir -p $(dirname "{{.PlanOutput}}")
+      - cat ./varfile.template.json | envsubst > {{.Varsfile}}
       - terraform plan
-          --var aws_access_key="${AWS_ACCESS_KEY_ID}"
-          --var aws_secret_key="${AWS_SECRET_ACCESS_KEY}"
-          --var cloudflare_api_token="${CLOUDFLARE_API_TOKEN}"
+          --var-file "{{.Varsfile}}"
           --out "{{.PlanOutput}}"
 
   tf:local:test:apply:
@@ -238,15 +238,15 @@ tasks:
 
   tf:local:test:destroy:
     dir: ./terraform/test
-    vars:
-      PlanOutput: "/tmp/terraform/test/plan.destroy.out"
     dotenv:
       - .secrets/env
+    vars:
+      PlanOutput: "/tmp/terraform/test/plan.destroy.out"
+      Varsfile: ../../.secrets/test/varfile.json
     cmds:
+      - cat ./varfile.template.json | envsubst > {{.Varsfile}}
       - terraform plan
-          --var aws_access_key="${AWS_ACCESS_KEY_ID}"
-          --var aws_secret_key="${AWS_SECRET_ACCESS_KEY}"
-          --var cloudflare_api_token="${CLOUDFLARE_API_TOKEN}"
+          --var-file "{{.Varsfile}}"
           --destroy
           --out "{{.PlanOutput}}"
       - terraform apply "{{.PlanOutput}}"

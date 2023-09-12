@@ -33,6 +33,11 @@ variable "node_labels" {
   default     = {}
 }
 
+variable "use_cloudflare_nameserver" {
+  description = "use cloudflare nameserver: 1.1.1.1"
+  default     = false
+}
+
 #variable "cloud_provider_name" {
 #  description = "cloud provider name, to be used in node-labels"
 #  type        = string
