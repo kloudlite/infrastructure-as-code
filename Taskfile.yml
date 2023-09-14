@@ -172,6 +172,7 @@ tasks:
       - .secrets/env
     cmds:
       - mkdir -p $(dirname "{{.PlanOutput}}")
+      - mkdir -p $(dirname "{{.Varsfile}}")
       - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
       - terraform plan
           --var-file "{{.Varsfile}}"
