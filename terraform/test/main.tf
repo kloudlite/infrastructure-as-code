@@ -1,16 +1,13 @@
-locals {
-  #  default_master_nodes_config = {
-  #    instance_type    = "c6a.large"
-  #    root_volume_size = 40
-  #    root_volume_type = "gp3"
-  #  }
-  #
-  #  default_worker_nodes_config = {
-  #    instance_type    = "c6a.large"
-  #    root_volume_size = 50
-  #    root_volume_type = "gp3"
-  #  }
+resource "aws_iam_instance_profile" "full_s3_and_block_storage" {
+  role = "EC2StorageAccess"
+}
 
+module "aws-security-groups" {
+  source = "../modules/aws-security-groups"
+}
+
+
+locals {
   k3s_node_labels = {
     "kloudlite.io/cloud-provider.name" : "aws",
     "kloudlite.io/cloud-provider.region" : var.aws_region,
@@ -18,21 +15,20 @@ locals {
 
   k3s_node_label_az = "kloudlite.io/cloud-provider.az"
 
-  #  nodes = {
-  #    "master-1" : merge({ az = "ap-south-1a", role = "primary" }, local.default_master_nodes_config),
-  #    "master-2" : merge({ az = "ap-south-1b", role = "secondary" }, local.default_master_nodes_config),
-  #    "master-3" : merge({ az = "ap-south-1c", role = "secondary" }, local.default_master_nodes_config),
-  #
-  #    "worker-1" : merge({ az = "ap-south-1b", role = "agent" }, local.default_worker_nodes_config),
-  #  }
+  nodes_config = {
+    for node_name, node_cfg in var.nodes_config : node_name => merge({
+      iam_instance_profile = aws_iam_instance_profile.full_s3_and_block_storage.name
+      security_groups      = node_cfg.role == "agent" ? module.aws-security-groups.security_group_k3s_agents_names : module.aws-security-groups.security_group_k3s_masters_names
+    }, node_cfg)
+  }
 
   primary_master_nodes = {
-    for node_name, node_cfg in var.nodes_config : node_name => node_cfg if node_cfg.role == "primary-master"
+    for node_name, node_cfg in local.nodes_config : node_name => node_cfg if node_cfg.role == "primary-master"
   }
   secondary_master_nodes = {
-    for node_name, node_cfg in var.nodes_config : node_name => node_cfg if node_cfg.role == "secondary-master"
+    for node_name, node_cfg in local.nodes_config : node_name => node_cfg if node_cfg.role == "secondary-master"
   }
-  agent_nodes = {for node_name, node_cfg in var.nodes_config : node_name => node_cfg if node_cfg.role == "agent"}
+  agent_nodes = {for node_name, node_cfg in local.nodes_config : node_name => node_cfg if node_cfg.role == "agent"}
 }
 
 check "single_master" {
@@ -49,7 +45,10 @@ locals {
 
 module "ec2-nodes" {
   source       = "../modules/ec2-nodes"
-  save_ssh_key = true
+  save_ssh_key = {
+    enabled = true
+    path    = "/tmp/ec2-ssh-key.pem"
+  }
 
   aws_access_key = var.aws_access_key
   aws_secret_key = var.aws_secret_key
@@ -57,7 +56,7 @@ module "ec2-nodes" {
   ami        = var.aws_ami
   aws_region = var.aws_region
 
-  nodes_config = var.nodes_config
+  nodes_config = local.nodes_config
 }
 
 module "k3s-primary-master" {
@@ -74,6 +73,8 @@ module "k3s-primary-master" {
     "kloudlite.io/cloud-provider.az" : local.primary_master_node.az
   }, local.k3s_node_labels)
   use_cloudflare_nameserver = true
+
+  disable_ssh = false
 }
 
 module "k3s-secondary-master" {
@@ -114,8 +115,6 @@ module "k3s-agents" {
 
   use_cloudflare_nameserver = true
 
-  #  k3s_server_host = module.k3s-primary-master.public_ip
-  #  k3s_server_host = aws_eip.k3s_masters_elastic_ips[local.primary_master_node_name].public_ip
   k3s_server_host = var.cloudflare_domain
   k3s_token       = module.k3s-primary-master.k3s_token
 }
@@ -141,26 +140,46 @@ module "cloudflare-dns" {
   ]
 }
 
-resource "time_sleep" "sleep_before_applying_helm" {
-  create_duration = "1m"
+ module "helm-aws-ebs-csi" {
+   providers = {
+     helm = helm
+   }
+   source          = "../modules/helm-aws-ebs-csi"
+   kubeconfig      = module.k3s-primary-master.kubeconfig_with_public_ip
+   storage_classes = {
+     "sc-xfs" : {
+       volume_type = "gp3"
+       fs_type     = "xfs"
+     },
+     "sc-ext4" : {
+       volume_type = "gp3"
+       fs_type     = "ext4"
+     },
+   }
+ }
+
+module "k3s-agents-on-ec2-fleets" {
+  source = "../modules/k3s-agents-on-ec2-fleets"
+
+  aws_ami         = var.aws_ami
+  k3s_server_host = var.cloudflare_domain
+  k3s_token       = module.k3s-primary-master.k3s_token
   depends_on = [module.k3s-primary-master]
+  spot_nodes      = {
+    for node_name, node_cfg in var.spot_nodes_config : node_name => {
+      instance_type        = node_cfg.instance_type
+      az                   = node_cfg.az
+      security_groups      = module.aws-security-groups.security_group_k3s_agents_ids
+      iam_instance_profile = aws_iam_instance_profile.full_s3_and_block_storage.name
+      node_labels          = merge({
+        "kloudlite.io/cloud-provider.az" : node_cfg.az,
+        "kloudlite.io/node-instance-type" : "spot"
+      }, local.k3s_node_labels)
+    }
+  }
+  save_ssh_key = {
+    enabled = true
+    path    = "/tmp/spot-ssh-key.pem"
+  }
 }
 
-module "helm-aws-ebs-csi" {
-  providers = {
-    helm = helm
-  }
-  source     = "../modules/helm-aws-ebs-csi"
-  kubeconfig = module.k3s-primary-master.kubeconfig_with_public_ip
-  depends_on = [time_sleep.sleep_before_applying_helm]
-  storage_classes = {
-    "sc-xfs" : {
-      volume_type = "gp3"
-      fs_type     = "xfs"
-    },
-    "sc-ext4" : {
-      volume_type = "gp3"
-      fs_type     = "ext4"
-    },
-  }
-}

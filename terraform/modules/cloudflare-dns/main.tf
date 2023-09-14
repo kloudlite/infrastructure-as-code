@@ -6,4 +6,6 @@ resource "cloudflare_record" "A_records" {
   type     = "A"
   ttl      = 300
   proxied  = false
+  allow_overwrite = true
+  comment = "managed by kloudlite's infrastructure-as-code"
 }

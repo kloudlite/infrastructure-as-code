@@ -7,6 +7,9 @@
 # - deleting the service account
 # - deleting the secret associated with that service account
 
+output_file=$1
+[ -z "$output_file" ] && echo "output_file must be defined as 1st argument to script, exiting ..." && exit 1
+
 username="kloudlite-admin"
 namespace="default"
 
@@ -18,10 +21,7 @@ KUBECTL="${KUBECTL:-kubectl}"
 echo "KUBECTL is set to: $KUBECTL"
 
 curr_context_name=$($KUBECTL config view -o jsonpath='{.current-context}')
-# cluster_name=$($KUBECTL config view -o json | jq -r ".contexts[] | select(.name == \"$curr_context_name\")| .context.cluster")
 cluster_name=$($KUBECTL config view -o jsonpath="{.contexts[?(@.name=='${curr_context_name}')].context.cluster}")
-# cluster_url=$($KUBECTL config view -o json | jq -r ".clusters[] | select(.name == \"$curr_context_name\") | .cluster.server")
-#cluster_url=$($KUBECTL config view -o jsonpath="{.clusters[?(@.name=='${cluster_name}')].cluster.server}")
 
 new_context_name="${username}-ctx"
 
@@ -78,22 +78,48 @@ EOF
 $KUBECTL apply -f cluster-role-binding.yaml
 popd || exit 1
 
+### now generating a new kubeconfig from this generated service account token
+function generate_kubeconfig() {
+	token=$1
+	output=$2
+
+	$KUBECTL config set-credentials "${username}" --token="${token}"
+	$KUBECTL config set-context ${new_context_name} --cluster="${cluster_name}" --user="${username}" --namespace="${namespace}"
+	$KUBECTL config use-context ${new_context_name}
+
+	echo "saving generated kubeconfig to kubeconfig.yml"
+	$KUBECTL config view --raw --minify=true >"${output}"
+	$KUBECTL config use-context "${curr_context_name}"
+
+	echo "cleaning up existing kubeconfig for sanity reasons ..."
+	$KUBECTL config delete-context ${new_context_name}
+	$KUBECTL config delete-user "${username}"
+}
+
 # Get service account token from secret
 # user_token=$($KUBECTL get secret "${svc_account_secret_name}" -n "${namespace}" -o json | jq -r '.data["token"]' | base64 -d)
 user_token=$($KUBECTL get secret "${svc_account_secret_name}" -n "${namespace}" -o jsonpath={.data."token"} | base64 -d)
+generate_kubeconfig "${user_token}" "${output_file}"
 
-### now generating a new kubeconfig from this generated service account token
-#$KUBECTL config set-cluster "${cluster_name}" --embed-certs=true --server="${cluster_url}" --certificate-authority=/tmp/ca.crt
-$KUBECTL config set-credentials "${username}" --token="${user_token}"
-$KUBECTL config set-context ${new_context_name} --cluster="${cluster_name}" --user="${username}" --namespace="${namespace}"
-$KUBECTL config use-context ${new_context_name}
+cert=$($KUBECTL get secret "${svc_account_secret_name}" -n "${namespace}" -o jsonpath={.data."ca\.crt"} | base64 -d)
 
-echo "saving generated kubeconfig to kubeconfig.yml"
-$KUBECTL config view --raw --minify=true >kubeconfig.yml
-$KUBECTL config use-context "${curr_context_name}"
+validity_starts_at=$(echo "${cert}" | openssl x509 -noout -startdate | awk -F= '{print $2}')
+echo "${output_file} will be valid after ${validity_starts_at}"
 
-echo "cleaning up existing kubeconfig for sanity reasons ..."
-$KUBECTL config delete-context ${new_context_name} >/dev/null
-$KUBECTL config delete-user "${username}"
+validity_start_timestamp=$(date -d "${validity_starts_at}" +%s)
+curr_timestamp="$(date +%s)"
 
+echo "validity_start_timestamp: ${validity_start_timestamp}"
+echo "curr_timestamp: ${curr_timestamp}"
+diff=$((validity_start_timestamp - curr_timestamp))
+
+echo "certificate will be valid in ${diff} seconds ..."
+while [ $((diff)) -ge 0 ]; do
+	echo "certificate will be valid in ${diff} seconds ..."
+	sleep 1
+	curr_timestamp="$(date +%s)"
+	diff=$((validity_start_timestamp - curr_timestamp))
+done
+
+echo "certificate is valid now, generated ${output_file} can now be used to communicate with the cluster"
 echo "DONE 🚀"

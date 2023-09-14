@@ -9,14 +9,16 @@ resource "aws_key_pair" "k3s_nodes_ssh_key" {
 }
 
 resource "null_resource" "save_ssh_key" {
-  count = var.save_ssh_key ? 1 : 0
+  count = var.save_ssh_key.enabled ? 1 : 0
 
   provisioner "local-exec" {
-    command = "echo '${tls_private_key.ssh_key.private_key_pem}' > /tmp/ssh_key.pem && chmod 600 /tmp/ssh_key.pem"
+    command = "echo '${tls_private_key.ssh_key.private_key_pem}' > ${var.save_ssh_key.path} && chmod 600 ${var.save_ssh_key.path}"
   }
 }
 
 resource "aws_security_group" "sg" {
+  description = "terraform: kloudlite iac module: ec2-nodes"
+
   ingress {
     from_port   = 22
     protocol    = "tcp"
@@ -128,11 +130,12 @@ resource "aws_instance" "ec2_instances" {
   for_each          = {for idx, config in var.nodes_config : idx => config}
   ami               = var.ami
   instance_type     = each.value.instance_type
-  security_groups   = [aws_security_group.sg.name]
+  security_groups   = each.value.security_groups
   key_name          = aws_key_pair.k3s_nodes_ssh_key.key_name
   availability_zone = each.value.az
 
-  iam_instance_profile = aws_iam_instance_profile.full_s3_and_block_storage.name
+  #  iam_instance_profile = aws_iam_instance_profile.full_s3_and_block_storage.name
+  iam_instance_profile = each.value.iam_instance_profile
 
   tags = {
     Name      = each.key

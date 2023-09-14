@@ -167,14 +167,14 @@ tasks:
     dir: ./terraform/dev
     vars:
       PlanOutput: "/tmp/terraform/dev/plan.out"
+      Varsfile: ../../.secrets/dev/varfile.json
     dotenv:
       - .secrets/env
     cmds:
       - mkdir -p $(dirname "{{.PlanOutput}}")
+      - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
       - terraform plan
-          --var cloudflare_api_token="${CLOUDFLARE_API_TOKEN}"
-          --var aws_access_key="${AWS_ACCESS_KEY_ID}"
-          --var aws_secret_key="${AWS_SECRET_ACCESS_KEY}"
+          --var-file "{{.Varsfile}}"
           --out "{{.PlanOutput}}"
 
   tf:local:dev:apply:
@@ -190,13 +190,13 @@ tasks:
     dir: ./terraform/dev
     vars:
       PlanOutput: "/tmp/terraform/dev/plan.destroy.out"
+      Varsfile: ../../.secrets/dev/varfile.json
     dotenv:
       - .secrets/env
     cmds:
+      - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
       - terraform plan
-          --var cloudflare_api_token="${CLOUDFLARE_API_TOKEN}"
-          --var aws_access_key="${AWS_ACCESS_KEY_ID}"
-          --var aws_secret_key="${AWS_SECRET_ACCESS_KEY}"
+          --var-file "{{.Varsfile}}"
           --destroy
           --out "{{.PlanOutput}}"
       - terraform apply "{{.PlanOutput}}"
@@ -220,9 +220,11 @@ tasks:
     vars:
       PlanOutput: "/tmp/terraform/test/plan.out"
       Varsfile: ../../.secrets/test/varfile.json
+    dotenv:
+      - .secrets/env
     cmds:
       - mkdir -p $(dirname "{{.PlanOutput}}")
-      - cat ./varfile.template.json | envsubst > {{.Varsfile}}
+      - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
       - terraform plan
           --var-file "{{.Varsfile}}"
           --out "{{.PlanOutput}}"
@@ -244,7 +246,7 @@ tasks:
       PlanOutput: "/tmp/terraform/test/plan.destroy.out"
       Varsfile: ../../.secrets/test/varfile.json
     cmds:
-      - cat ./varfile.template.json | envsubst > {{.Varsfile}}
+      - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
       - terraform plan
           --var-file "{{.Varsfile}}"
           --destroy
