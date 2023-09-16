@@ -1,7 +1,7 @@
 aws_access_key: ${AWS_ACCESS_KEY_ID}
 aws_secret_key: ${AWS_SECRET_ACCESS_KEY}
 aws_region: ap-south-1
-aws_ami: ami-0f78219c8292792d9
+aws_ami: ami-09b4a7b8452e27f36
 
 cloudflare_api_token: ${CLOUDFLARE_API_TOKEN}
 cloudflare_domain: ${CLOUDFLARE_DOMAIN}

@@ -93,6 +93,8 @@ resource "aws_spot_fleet_request" "spot-fleets" {
   for_each       = {for idx, config in var.spot_nodes : idx => config}
   iam_fleet_role = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-ec2-spot-fleet-tagging-role"
 
+  instance_pools_to_use_count = 1
+
   target_capacity               = 1
   on_demand_target_capacity     = 0
   allocation_strategy           = "priceCapacityOptimized"

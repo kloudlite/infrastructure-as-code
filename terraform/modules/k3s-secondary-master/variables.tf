@@ -25,6 +25,11 @@ variable "secondary_masters" {
   }))
 }
 
+variable "k3s_master_nodes_public_ips" {
+  description = "A list of private IP addresses of the k3s masters"
+  type        = list(string)
+}
+
 variable "disable_ssh" {
   description = "Disable ssh connection to the k3s secondary masters"
   type        = bool

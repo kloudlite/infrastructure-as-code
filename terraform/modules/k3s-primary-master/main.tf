@@ -36,8 +36,16 @@ primaryMaster:
   token: ${random_password.k3s_token.result}
   nodeName: ${var.node_name}
   labels: ${jsonencode(var.node_labels)}
-  SANs:
-    - ${var.public_domain}
+  #SANs: ${jsonencode(concat([var.public_domain, "10.43.0.1"], var.k3s_master_nodes_public_ips))}
+  SANs: ${jsonencode(concat([var.public_domain], var.k3s_master_nodes_public_ips))}
+  extraServerArgs: ${jsonencode([
+    "--disable-helm-controller",
+    "--disable", "traefik",
+    "--disable", "servicelb",
+    "--node-external-ip", var.public_ip,
+    "--tls-san-security",
+    "--flannel-external-ip",
+  ])}
 EOF2
 
     sudo ln -sf $PWD/runner-config.yml /runner-config.yml

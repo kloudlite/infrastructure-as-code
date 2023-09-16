@@ -144,7 +144,7 @@ module "cloudflare-dns" {
    providers = {
      helm = helm
    }
-   source          = "../modules/helm-aws-ebs-csi"
+   source          = "../modules/helm-charts/aws-ebs-csi"
    kubeconfig      = module.k3s-primary-master.kubeconfig_with_public_ip
    storage_classes = {
      "sc-xfs" : {

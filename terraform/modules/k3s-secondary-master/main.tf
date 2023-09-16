@@ -7,7 +7,7 @@ resource "null_resource" "setup_k3s_on_secondary_masters" {
     private_key = each.value.ssh_params.private_key
   }
 
-  provisioner "remote-exec" {
+  provisioner "remote-exec"  {
     inline = [
       <<-EOC
       cat > runner-config.yml<<EOF2
@@ -18,8 +18,17 @@ resource "null_resource" "setup_k3s_on_secondary_masters" {
         token: ${var.k3s_token}
         nodeName: ${each.key}
         labels: ${jsonencode(each.value.node_labels)}
-        SANs:
-          - ${var.public_domain}
+        #SANs: ${jsonencode(concat([var.public_domain, "10.43.0.1"], var.k3s_master_nodes_public_ips))}
+        SANs: ${jsonencode(concat([var.public_domain], var.k3s_master_nodes_public_ips))}
+        extraServerArgs: ${jsonencode([
+          "--disable-helm-controller",
+          "--disable", "traefik",
+          "--disable", "servicelb",
+          "--node-external-ip", each.value.public_ip,
+          "--tls-san-security",
+          "--flannel-external-ip",
+        ])}
+
       EOF2
 
       sudo ln -sf $PWD/runner-config.yml /runner-config.yml

@@ -8,7 +8,3 @@ terraform {
     }
   }
 }
-
-provider "ssh" {
-  debug_log = "/tmp/terraform-iac.ssh.log"
-}

@@ -8,6 +8,11 @@ variable "public_ip" {
   type        = string
 }
 
+variable "k3s_master_nodes_public_ips" {
+  description = "The public IP address of the all the master nodes"
+  type        = list(string)
+}
+
 variable "public_domain" {
   description = "The domain name to use for the cluster, e.g. cluster.example.com. It is used for the TLS certificate for etcd the Kubernetes API Server"
   type        = string
