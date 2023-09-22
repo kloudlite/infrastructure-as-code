@@ -1,0 +1,46 @@
+version: 3
+
+dotenv:
+  - .secrets/env
+
+vars:
+  Varsfile: ".secrets/varfile.json"
+
+tasks:
+  init:
+    cmds:
+      - terraform init
+    silent: true
+
+  plan:
+    dir: ./
+    vars:
+      PlanOutput: ".secrets/plan.out"
+    cmds:
+      - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
+      - terraform plan
+        --var-file "{{.Varsfile}}"
+        --out "{{.PlanOutput}}"
+
+  apply:
+    dir: ./
+    dotenv:
+      - .secrets/env
+    vars:
+      PlanOutput: ".secrets/plan.out"
+    cmds:
+      - terraform apply "{{.PlanOutput}}"
+
+  destroy:
+    dir: ./
+    dotenv:
+      - .secrets/env
+    vars:
+      PlanOutput: ".secrets/plan.destroy.out"
+    cmds:
+      - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
+      - terraform plan
+        --var-file "{{.Varsfile}}"
+        --destroy
+        --out "{{.PlanOutput}}"
+      - terraform apply "{{.PlanOutput}}"
