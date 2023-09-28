@@ -1,4 +1,5 @@
 variable "aws_access_key" { type = string }
+
 variable "aws_secret_key" { type = string }
 variable "aws_region" { type = string }
 
@@ -94,4 +95,9 @@ variable "restore_from_latest_s3_snapshot" {
   description = "should we restore cluster from latest snapshot"
   type        = bool
   default     = false
+}
+
+variable "kloudlite_release" {
+  description = "kloudlite release name to install"
+  type = string
 }

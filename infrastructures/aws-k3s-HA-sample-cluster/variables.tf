@@ -63,7 +63,7 @@ variable "spot_nodes_config" {
     })
     root_volume_size = optional(number, 50)
     root_volume_type = optional(string, "gp3")
-    allow_public_ip = optional(bool, false)
+    allow_public_ip  = optional(bool, false)
   }))
 }
 
@@ -71,4 +71,9 @@ variable "disable_ssh" {
   description = "disable ssh access to the nodes"
   type        = bool
   default     = true
+}
+
+variable "kloudlite_release" {
+  description = "kloudlite release version to install"
+  type        = string
 }

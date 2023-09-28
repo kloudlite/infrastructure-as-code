@@ -1,9 +1,12 @@
 module "aws-k3s-HA" {
-  source                        = "../../terraform/bundles/aws-k3s-HA"
-  aws_access_key                = var.aws_access_key
-  aws_secret_key                = var.aws_secret_key
-  aws_region                    = var.aws_region
+  source         = "../../terraform/bundles/aws-k3s-HA"
+  aws_access_key = var.aws_access_key
+  aws_secret_key = var.aws_secret_key
+  aws_region     = var.aws_region
+
   aws_iam_instance_profile_role = var.aws_iam_instance_profile_role
+  aws_ami                       = var.aws_ami
+  aws_ami_ssh_username          = "ubuntu"
 
   ec2_nodes_config = var.ec2_nodes_config
 
@@ -21,7 +24,12 @@ module "aws-k3s-HA" {
   }
   spot_nodes_config = var.spot_nodes_config
 
-  disable_ssh = var.disable_ssh
+  disable_ssh      = var.disable_ssh
+  k3s_backup_to_s3 = {
+    enabled = false
+  }
+
+  kloudlite_release = var.kloudlite_release
 }
 
 output "k3s_masters" {

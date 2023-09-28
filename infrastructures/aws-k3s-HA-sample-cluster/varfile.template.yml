@@ -1,7 +1,7 @@
 aws_access_key: ${AWS_ACCESS_KEY_ID}
 aws_secret_key: ${AWS_SECRET_ACCESS_KEY}
 aws_region: ap-south-1
-aws_ami: ami-091ba1ae386718640
+aws_ami: ami-06d146e85d1709abb
 
 aws_iam_instance_profile_role: EC2StorageAccess
 
@@ -39,7 +39,7 @@ spot_settings:
   spot_fleet_tagging_role_name: aws-ec2-spot-fleet-tagging-role
 
 spot_nodes_config:
-  spot-1:
+  new-spot-1:
     vcpu:
       min: 1
       max: 2
@@ -49,7 +49,7 @@ spot_nodes_config:
     root_volume_size: 50
     allow_public_ip: true
 
-  spot-2:
+  new-spot-2:
     vcpu:
       min: 1
       max: 2
@@ -60,3 +60,5 @@ spot_nodes_config:
     allow_public_ip: true
 
 disable_ssh: false
+
+kloudlite_release: v1.0.5-nightly

@@ -9,7 +9,7 @@ ec2_nodes_config = {
     role             = "primary-master"
     instance_type    = "c6a.large"
     root_volume_size = 50
-    with_elastic_ip  = true
+    with_elastic_ip  = false
   },
 
   "master-2" : {
@@ -17,7 +17,7 @@ ec2_nodes_config = {
     role             = "secondary-master"
     instance_type    = "c6a.large"
     root_volume_size = 50
-    with_elastic_ip  = true
+    with_elastic_ip  = false
   },
 
   "master-3" : {
@@ -25,7 +25,7 @@ ec2_nodes_config = {
     role             = "secondary-master"
     instance_type    = "c6a.large"
     root_volume_size = 50
-    with_elastic_ip  = true
+    with_elastic_ip  = false
   },
 }
 
@@ -71,3 +71,4 @@ k3s_backup_to_s3 = {
 }
 
 restore_from_latest_s3_snapshot = false
+kloudlite_release               = "v1.0.5-nightly"
