@@ -2,10 +2,7 @@ variable "aws_access_key" { type = string }
 variable "aws_secret_key" { type = string }
 
 variable "aws_region" { type = string }
-variable "aws_ami" {
-  type    = string
-  default = "ami-0f78219c8292792d9"
-}
+variable "aws_ami" { type = string }
 
 variable "aws_iam_instance_profile_role" {
   description = "aws iam instance profile role"
@@ -53,6 +50,7 @@ variable "spot_settings" {
 variable "spot_nodes_config" {
   description = "spot nodes configuration"
   type        = map(object({
+    az   = optional(string)
     vcpu = object({
       min = number
       max = number
@@ -63,7 +61,6 @@ variable "spot_nodes_config" {
     })
     root_volume_size = optional(number, 50)
     root_volume_type = optional(string, "gp3")
-    allow_public_ip  = optional(bool, false)
   }))
 }
 
@@ -73,7 +70,38 @@ variable "disable_ssh" {
   default     = true
 }
 
+variable "k3s_backup_to_s3" {
+  description = "configuration to backup k3s etcd to s3"
+  type        = object({
+    enabled = bool
+
+    bucket_name   = optional(string, "")
+    bucket_region = optional(string, "")
+    bucket_folder = optional(string, "")
+  })
+
+  validation {
+    condition = !var.k3s_backup_to_s3.enabled || alltrue([
+      var.k3s_backup_to_s3.bucket_name != "",
+      var.k3s_backup_to_s3.bucket_region != "",
+      var.k3s_backup_to_s3.bucket_folder != "",
+    ])
+    error_message = "when backup_to_s3 is enabled, all the following variables must be set: bucket_name, bucket_region, bucket_folder"
+  }
+}
+
+variable "restore_from_latest_s3_snapshot" {
+  description = "should we restore cluster from latest snapshot"
+  type        = bool
+  default     = false
+}
+
 variable "kloudlite_release" {
-  description = "kloudlite release version to install"
+  description = "kloudlite release name to install"
   type        = string
+}
+
+variable "taint_master_nodes" {
+  description = "taint master nodes, so that nothing is deployed on it by default"
+  type        = bool
 }
