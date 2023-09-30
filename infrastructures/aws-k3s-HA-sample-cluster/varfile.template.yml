@@ -62,3 +62,5 @@ spot_nodes_config:
 disable_ssh: false
 
 kloudlite_release: v1.0.5-nightly
+
+taint_master_nodes: true

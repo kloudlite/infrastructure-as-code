@@ -1,8 +1,7 @@
 variable "aws_access_key" { type = string }
-
 variable "aws_secret_key" { type = string }
-variable "aws_region" { type = string }
 
+variable "aws_region" { type = string }
 variable "aws_ami" { type = string }
 
 variable "aws_iam_instance_profile_role" {
@@ -99,5 +98,10 @@ variable "restore_from_latest_s3_snapshot" {
 
 variable "kloudlite_release" {
   description = "kloudlite release name to install"
-  type = string
+  type        = string
+}
+
+variable "taint_master_nodes" {
+  description = "taint master nodes, so that nothing is deployed on it by default"
+  type        = bool
 }

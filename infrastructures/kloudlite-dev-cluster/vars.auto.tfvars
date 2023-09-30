@@ -12,21 +12,21 @@ ec2_nodes_config = {
     with_elastic_ip  = false
   },
 
-  "master-2" : {
-    az               = "ap-south-1b"
-    role             = "secondary-master"
-    instance_type    = "c6a.large"
-    root_volume_size = 50
-    with_elastic_ip  = false
-  },
-
-  "master-3" : {
-    az               = "ap-south-1c"
-    role             = "secondary-master"
-    instance_type    = "c6a.large"
-    root_volume_size = 50
-    with_elastic_ip  = false
-  },
+  #  "master-2" : {
+  #    az               = "ap-south-1b"
+  #    role             = "secondary-master"
+  #    instance_type    = "c6a.large"
+  #    root_volume_size = 50
+  #    with_elastic_ip  = false
+  #  },
+  #
+  #  "master-3" : {
+  #    az               = "ap-south-1c"
+  #    role             = "secondary-master"
+  #    instance_type    = "c6a.large"
+  #    root_volume_size = 50
+  #    with_elastic_ip  = false
+  #  },
 }
 
 spot_settings = {
@@ -36,7 +36,7 @@ spot_settings = {
 
 spot_nodes_config = {
   "spot-1" : {
-    az   = "ap-south-1b"
+    az   = "ap-south-1a"
     vcpu = {
       min = 1
       max = 2
@@ -48,7 +48,33 @@ spot_nodes_config = {
     }
   },
   "spot-2" : {
+    az   = "ap-south-1b"
+    vcpu = {
+      min = 1
+      max = 2
+    }
+
+    memory_per_vcpu = {
+      min = 1.5
+      max = 2
+    }
+  },
+
+  "spot-3" : {
     az   = "ap-south-1c"
+    vcpu = {
+      min = 1
+      max = 2
+    }
+
+    memory_per_vcpu = {
+      min = 1.5
+      max = 2
+    }
+  },
+
+  "spot-4" : {
+    az   = "ap-south-1a"
     vcpu = {
       min = 1
       max = 2
@@ -72,3 +98,4 @@ k3s_backup_to_s3 = {
 
 restore_from_latest_s3_snapshot = false
 kloudlite_release               = "v1.0.5-nightly"
+taint_master_nodes              = true

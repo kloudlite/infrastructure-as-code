@@ -29,13 +29,6 @@ module "aws-k3s-HA" {
     enabled = false
   }
 
-  kloudlite_release = var.kloudlite_release
-}
-
-output "k3s_masters" {
-  value = module.aws-k3s-HA.k3s_masters
-}
-
-output "kubeconfig" {
-  value = module.aws-k3s-HA.kubeconfig
+  kloudlite_release  = var.kloudlite_release
+  taint_master_nodes = var.taint_master_nodes
 }

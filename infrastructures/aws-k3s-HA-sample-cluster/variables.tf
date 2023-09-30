@@ -73,6 +73,11 @@ variable "disable_ssh" {
   default     = true
 }
 
+variable "taint_master_nodes" {
+  description = "taint master nodes, so that nothing is deployed on it by default"
+  type        = bool
+}
+
 variable "kloudlite_release" {
   description = "kloudlite release version to install"
   type        = string
