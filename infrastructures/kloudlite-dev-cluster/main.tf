@@ -29,6 +29,11 @@ module "aws-k3s-HA" {
 
   restore_from_latest_s3_snapshot = var.restore_from_latest_s3_snapshot
 
-  kloudlite_release  = var.kloudlite_release
   taint_master_nodes = var.taint_master_nodes
+  kloudlite          = {
+    release            = var.kloudlite_release
+    install_crds       = true
+    install_csi_driver = true
+    install_operators  = true
+  }
 }

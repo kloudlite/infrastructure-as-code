@@ -31,4 +31,11 @@ module "aws-k3s-HA" {
 
   kloudlite_release  = var.kloudlite_release
   taint_master_nodes = var.taint_master_nodes
+
+  kloudlite = {
+    release            = var.kloudlite_release
+    install_crds       = true
+    install_csi_driver = true
+    install_operators  = true
+  }
 }
