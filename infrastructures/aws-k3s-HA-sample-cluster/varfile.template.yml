@@ -35,7 +35,7 @@ ec2_nodes_config:
 #   root_volume_size: 50
 
 spot_settings:
-  enabled: true
+  enabled: false
   spot_fleet_tagging_role_name: aws-ec2-spot-fleet-tagging-role
 
 spot_nodes_config:
@@ -64,3 +64,6 @@ disable_ssh: false
 kloudlite_release: v1.0.5-nightly
 
 taint_master_nodes: true
+
+kloudlite_agent_vars:
+  install: false

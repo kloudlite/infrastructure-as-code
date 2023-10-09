@@ -35,5 +35,13 @@ module "aws-k3s-HA" {
     install_crds       = true
     install_csi_driver = true
     install_operators  = true
+    install_agent      = var.kloudlite_agent_vars.install
+    agent_vars         = {
+      account_name             = var.kloudlite_agent_vars.account_name
+      cluster_name             = var.kloudlite_agent_vars.cluster_name
+      cluster_token            = var.kloudlite_agent_vars.cluster_token
+      dns_host                 = var.kloudlite_agent_vars.dns_host
+      message_office_grpc_addr = var.kloudlite_agent_vars.message_office_grpc_addr
+    }
   }
 }

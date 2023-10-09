@@ -82,3 +82,26 @@ variable "kloudlite_release" {
   description = "kloudlite release version to install"
   type        = string
 }
+
+variable "kloudlite_agent_vars" {
+  description = "kloudlite agent vars"
+  type        = object({
+    install                  = bool
+    account_name             = optional(string)
+    cluster_name             = optional(string)
+    cluster_token            = optional(string)
+    dns_host                 = optional(string)
+    message_office_grpc_addr = optional(string)
+  })
+
+  validation {
+    error_message = "when kloudlite_agent_vars.install is true, all the following variables must be set: account_name, cluster_name, cluster_token, dns_host, message_office_grpc_addr"
+    condition = var.kloudlite_agent_vars.install == false || (
+      var.kloudlite_agent_vars.account_name != "" &&
+      var.kloudlite_agent_vars.cluster_name != "" &&
+      var.kloudlite_agent_vars.cluster_token != "" &&
+      var.kloudlite_agent_vars.dns_host != "" &&
+      var.kloudlite_agent_vars.message_office_grpc_addr != ""
+    )
+  }
+}
