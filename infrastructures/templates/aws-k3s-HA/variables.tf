@@ -3,6 +3,10 @@ variable "aws_secret_key" { type = string }
 
 variable "aws_region" { type = string }
 variable "aws_ami" { type = string }
+variable "aws_nvidia_gpu_ami" {
+  description = "kloudlite aws nvidia gpu ami"
+  type        = string
+}
 
 variable "aws_iam_instance_profile_role" {
   description = "aws iam instance profile role"
@@ -27,9 +31,9 @@ variable "ec2_nodes_config" {
   }))
 
   validation {
-    condition = alltrue([
-      for k, v in var.ec2_nodes_config :contains(["primary-master", "secondary-master", "agent"], v.role)
-    ])
+    condition = alltrue(
+      [for k, v in var.ec2_nodes_config :contains(["primary-master", "secondary-master", "agent"], v.role)],
+    )
     error_message = "Invalid node role, must be one of primary, secondary or agent"
   }
 }
@@ -119,7 +123,7 @@ variable "kloudlite_agent_vars" {
 
   validation {
     error_message = "when kloudlite_agent_vars.install is true, all the following variables must be set: account_name, cluster_name, cluster_token, dns_host, message_office_grpc_addr"
-    condition = var.kloudlite_agent_vars.install == false || (
+    condition     = var.kloudlite_agent_vars.install == false || (
     var.kloudlite_agent_vars.account_name != "" &&
     var.kloudlite_agent_vars.cluster_name != "" &&
     var.kloudlite_agent_vars.cluster_token != "" &&
@@ -129,3 +133,7 @@ variable "kloudlite_agent_vars" {
   }
 }
 
+variable "enable_nvidia_gpu_support" {
+  description = "enable nvidia gpu support"
+  type        = bool
+}

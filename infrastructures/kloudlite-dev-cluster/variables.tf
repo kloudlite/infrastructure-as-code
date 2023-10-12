@@ -3,6 +3,10 @@ variable "aws_secret_key" { type = string }
 
 variable "aws_region" { type = string }
 variable "aws_ami" { type = string }
+variable "aws_nvidia_gpu_ami" {
+  description = "kloudlite aws nvidia gpu ami"
+  type        = string
+}
 
 variable "aws_iam_instance_profile_role" {
   description = "aws iam instance profile role"
@@ -127,4 +131,9 @@ variable "kloudlite_agent_vars" {
     var.kloudlite_agent_vars.message_office_grpc_addr != ""
     )
   }
+}
+
+variable "enable_nvidia_gpu_support" {
+  description = "enable nvidia gpu support"
+  type        = bool
 }

@@ -66,13 +66,13 @@ variable "spot_nodes_config" {
     memory_per_vcpu = optional(object({
       min = number
       max = number
-    })) 
+    }))
     root_volume_size = optional(number, 50)
     root_volume_type = optional(string, "gp3")
     allow_public_ip  = optional(bool, false)
-    nvidia_gpu = optional(object({
-      enabled = bool
-      ami     = optional(string)
+    nvidia_gpu       = optional(object({
+      enabled        = bool
+      ami            = optional(string)
       instance_types = list(string)
     }))
   }))

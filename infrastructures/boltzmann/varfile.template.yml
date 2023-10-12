@@ -58,7 +58,7 @@ spot_nodes_config:
     allow_public_ip: true
     nvidia_gpu:
       enabled: false
-      instance_types: []
+      instance_types: [ ]
   spot-3-cpu:
     vcpu:
       min: 4
@@ -70,7 +70,7 @@ spot_nodes_config:
     allow_public_ip: true
     nvidia_gpu:
       enabled: false
-      instance_types: []
+      instance_types: [ ]
 
 disable_ssh: false
 

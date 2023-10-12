@@ -44,4 +44,6 @@ module "aws-k3s-HA" {
       message_office_grpc_addr = var.kloudlite_agent_vars.message_office_grpc_addr
     }
   }
+  aws_nvidia_gpu_ami        = ""
+  enable_nvidia_gpu_support = false
 }

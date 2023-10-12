@@ -96,12 +96,12 @@ variable "kloudlite_agent_vars" {
 
   validation {
     error_message = "when kloudlite_agent_vars.install is true, all the following variables must be set: account_name, cluster_name, cluster_token, dns_host, message_office_grpc_addr"
-    condition = var.kloudlite_agent_vars.install == false || (
-      var.kloudlite_agent_vars.account_name != "" &&
-      var.kloudlite_agent_vars.cluster_name != "" &&
-      var.kloudlite_agent_vars.cluster_token != "" &&
-      var.kloudlite_agent_vars.dns_host != "" &&
-      var.kloudlite_agent_vars.message_office_grpc_addr != ""
+    condition     = var.kloudlite_agent_vars.install == false || (
+    var.kloudlite_agent_vars.account_name != "" &&
+    var.kloudlite_agent_vars.cluster_name != "" &&
+    var.kloudlite_agent_vars.cluster_token != "" &&
+    var.kloudlite_agent_vars.dns_host != "" &&
+    var.kloudlite_agent_vars.message_office_grpc_addr != ""
     )
   }
 }

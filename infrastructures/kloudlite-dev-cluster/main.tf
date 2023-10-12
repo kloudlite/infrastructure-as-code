@@ -6,6 +6,7 @@ module "aws-k3s-HA" {
 
   aws_iam_instance_profile_role = var.aws_iam_instance_profile_role
   aws_ami                       = var.aws_ami
+  aws_nvidia_gpu_ami            = var.aws_nvidia_gpu_ami
   aws_ami_ssh_username          = "ubuntu"
 
   ec2_nodes_config = var.ec2_nodes_config
@@ -36,4 +37,5 @@ module "aws-k3s-HA" {
     install_csi_driver = true
     install_operators  = true
   }
+  enable_nvidia_gpu_support = var.enable_nvidia_gpu_support
 }
