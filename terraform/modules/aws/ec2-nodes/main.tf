@@ -1,31 +1,31 @@
-resource "tls_private_key" "ssh_key" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
+#resource "tls_private_key" "ssh_key" {
+#  algorithm = "RSA"
+#  rsa_bits  = 4096
+#}
+#
+#resource "random_id" "id" {
+#  byte_length = 12
+#}
+#
+#resource "aws_key_pair" "k3s_nodes_ssh_key" {
+#  key_name   = "iac-${random_id.id.hex}"
+#  public_key = tls_private_key.ssh_key.public_key_openssh
+#}
 
-resource "random_id" "id" {
-  byte_length = 12
-}
-
-resource "aws_key_pair" "k3s_nodes_ssh_key" {
-  key_name   = "iac-${random_id.id.hex}"
-  public_key = tls_private_key.ssh_key.public_key_openssh
-}
-
-resource "null_resource" "save_ssh_key" {
-  count = var.save_ssh_key.enabled ? 1 : 0
-
-  provisioner "local-exec" {
-    command = "echo '${tls_private_key.ssh_key.private_key_pem}' > ${var.save_ssh_key.path} && chmod 600 ${var.save_ssh_key.path}"
-  }
-}
+#resource "null_resource" "save_ssh_key" {
+#  count = var.save_ssh_key.enabled ? 1 : 0
+#
+#  provisioner "local-exec" {
+#    command = "echo '${tls_private_key.ssh_key.private_key_pem}' > ${var.save_ssh_key.path} && chmod 600 ${var.save_ssh_key.path}"
+#  }
+#}
 
 resource "aws_instance" "ec2_instances" {
   for_each          = {for idx, config in var.nodes_config : idx => config}
-  ami               = each.value.is_nvidia_gpu_node  == true ? var.nvidia_gpu_ami : var.ami
+  ami               = each.value.ami
   instance_type     = each.value.instance_type
   security_groups   = each.value.security_groups
-  key_name          = aws_key_pair.k3s_nodes_ssh_key.key_name
+  key_name          = var.ssh_key_name
   availability_zone = each.value.az
 
   iam_instance_profile = each.value.iam_instance_profile != "" ? each.value.iam_instance_profile : null

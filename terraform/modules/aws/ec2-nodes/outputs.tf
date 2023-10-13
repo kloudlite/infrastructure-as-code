@@ -20,7 +20,7 @@ output "ec2_instances_az" {
   value = {for name, instance in aws_instance.ec2_instances : name =>  instance.availability_zone}
 }
 
-output "ssh_private_key" {
-  sensitive = true
-  value     = tls_private_key.ssh_key.private_key_pem
-}
+#output "ssh_private_key" {
+#  sensitive = true
+#  value     = tls_private_key.ssh_key.private_key_pem
+#}
