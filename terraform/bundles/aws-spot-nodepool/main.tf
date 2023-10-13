@@ -1,15 +1,15 @@
-module "ssh-rsa-key" {
-  source = "../../modules/common/ssh-rsa-key"
-}
-
-resource "random_id" "id" {
-  byte_length = 4
-}
-
-resource "aws_key_pair" "k3s_nodes_ssh_key" {
-  key_name   = "${var.tracker_id}-${random_id.id.hex}-ssh-key"
-  public_key = module.ssh-rsa-key.public_key
-}
+#module "ssh-rsa-key" {
+#  source = "../../modules/common/ssh-rsa-key"
+#}
+#
+#resource "random_id" "id" {
+#  byte_length = 4
+#}
+#
+#resource "aws_key_pair" "k3s_nodes_ssh_key" {
+#  key_name   = "${var.tracker_id}-${random_id.id.hex}-ssh-key"
+#  public_key = module.ssh-rsa-key.public_key
+#}
 
 module "spot-fleet-request" {
   source                       = "../../modules/aws/spot-fleet-request"

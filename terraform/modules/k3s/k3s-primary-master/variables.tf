@@ -13,7 +13,7 @@ variable "k3s_master_nodes_public_ips" {
   type        = list(string)
 }
 
-variable "public_dns_hostname" {
+variable "public_dns_host" {
   description = "The domain name to use for the cluster, e.g. cluster.example.com. It is used for the TLS certificate for etcd the Kubernetes API Server"
   type        = string
 }

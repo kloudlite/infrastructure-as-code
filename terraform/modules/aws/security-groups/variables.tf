@@ -1,3 +1,8 @@
+variable "tracker_id" {
+  description = "tracker id"
+  type        = string
+}
+
 variable "allow_metrics_server_on_master" {
   description = "k3s metrics server: source: https://docs.k3s.io/installation/requirements#networking"
   type        = bool

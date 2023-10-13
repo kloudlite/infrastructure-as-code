@@ -1,17 +1,13 @@
-variable "spot_fleet_tagging_role_name" {
-  description = "The name of the role that will be used to tag spot fleet instances, we will use it to construct role ARN"
-  type        = string
-}
-
 variable "tracker_id" {
   description = "reference_id that should be included in names for each of the created resources"
   type        = string
 }
 
-variable "ssh_key_name" {
-  description = "ssh_key_name to be used when creating instances. It is the output of aws_key_pair.<var-name>.key_name"
+variable "spot_fleet_tagging_role_name" {
+  description = "The name of the role that will be used to tag spot fleet instances, we will use it to construct role ARN"
   type        = string
 }
+
 
 variable "node_name" {
   description = "spot fleet node name"
@@ -25,6 +21,11 @@ variable "availability_zone" {
 
 variable "ami" {
   description = "aws ami"
+  type        = string
+}
+
+variable "ssh_key_name" {
+  description = "ssh_key_name to be used when creating instances. It is the output of aws_key_pair.<var-name>.key_name"
   type        = string
 }
 
@@ -47,7 +48,7 @@ variable "security_groups" {
 variable "iam_instance_profile" {
   description = "iam instance profile for all nodes in this nodepool"
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "user_data" {

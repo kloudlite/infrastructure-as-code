@@ -1,0 +1,103 @@
+tracker_id: "example-cluster"
+
+aws_region: ap-south-1
+aws_access_key: ${AWS_ACCESS_KEY_ID}
+aws_secret_key: ${AWS_SECRET_ACCESS_KEY}
+
+k3s_masters:
+  ami: ami-06d146e85d1709abb
+  ami_ssh_username: ubuntu
+  instance_type: "c6a.large"
+  nvidia_gpu_enabled: false
+  root_volume_type: gp3
+  root_volume_size: 50
+  iam_instance_profile: ""
+
+  public_dns_host: dev3.kloudlite.io
+
+  cloudflare:
+    enabled: true
+    api_token: ${CLOUDFLARE_API_TOKEN}
+    zone_id: ${CLOUDFLARE_ZONE_ID}
+    domain: dev3.kloudlite.io
+
+  taint_master_nodes: true
+
+  backup_to_s3:
+    enabled: false
+
+  nodes:
+    master-1:
+      role: primary-master
+      availability_zone: ap-south-1a
+      # last_recreated_at: 0
+    master-2:
+      role: agent
+      availability_zone: ap-south-1b
+      # last_recreated_at: 0
+
+ec2_nodepools:
+  np-1:
+    ami: ami-06d146e85d1709abb
+    ami_ssh_username: ubuntu
+    availability_zone: "ap-south-1a"
+    instance_type: "c6a.large"
+    nvidia_gpu_enabled: false
+    root_volume_type: gp3
+    root_volume_size: 50
+    iam_instance_profile: ""
+    nodes:
+      node-1: { last_recreated_at: 1 }
+  np-2:
+    ami: ami-06d146e85d1709abb
+    ami_ssh_username: ubuntu
+    availability_zone: "ap-south-1b"
+    instance_type: "c6a.large"
+    nvidia_gpu_enabled: false
+    root_volume_type: gp3
+    root_volume_size: 50
+    iam_instance_profile: ""
+    nodes:
+      node-1: { }
+
+spot_nodepools:
+  spot-np-1:
+    ami: ami-06d146e85d1709abb
+    ami_ssh_username: ubuntu
+    availability_zone: "ap-south-1b"
+    nvidia_gpu_enabled: false
+    root_volume_type: gp3
+    root_volume_size: 50
+    spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
+    cpu_node:
+      vcpu:
+        min: 1
+        max: 2
+      memory_per_vcpu:
+        min: 2
+        max: 4
+    nodes:
+      node-1:
+        user_data: ""
+  spot-np-2:
+    ami: ami-06d146e85d1709abb
+    ami_ssh_username: ubuntu
+    availability_zone: "ap-south-1c"
+    nvidia_gpu_enabled: false
+    root_volume_type: gp3
+    root_volume_size: 50
+    spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
+    cpu_node:
+      vcpu:
+        min: 1
+        max: 2
+      memory_per_vcpu:
+        min: 2
+        max: 4
+    nodes:
+      node-1:
+        user_data: ""
+
+enable_nvidia_gpu_support: true
+kloudlite_params:
+  release: v1.0.5-nightly

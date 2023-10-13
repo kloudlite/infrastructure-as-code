@@ -1,10 +1,21 @@
+variable "tracker_id" {
+  description = "reference_id that should be included in names for each of the created resources"
+  type        = string
+}
+
 variable "availability_zone" {
   description = "availability zone for nodepool"
   type        = string
+  default     = null
 }
 
 variable "ami" {
   description = "aws ami to be used for all nodes created in this nodepool"
+  type        = string
+}
+
+variable "ssh_key_name" {
+  description = "ssh_key_name to be used when creating instances. It is the output of aws_key_pair.<var-name>.key_name"
   type        = string
 }
 
@@ -26,27 +37,22 @@ variable "nvidia_gpu_enabled" {
 variable "root_volume_size" {
   description = "root volume size for each of the nodes in this nodepool"
   type        = number
-
-  validation {
-    error_message = "when node is nvidia gpu enabled, root volume size must be greater than 75GiB, otherwise greater than 50Gi"
-    condition     = var.root_volume_size > (var.nvidia_gpu_enabled ? 75 : 50)
-  }
 }
 
 variable "root_volume_type" {
   description = "root volume type for each of the nodes in this nodepool"
   type        = string
-  default     = "gp3"
 }
 
 variable "iam_instance_profile" {
   description = "iam instance profile for all nodes in this nodepool"
-  type        = optional(string)
+  type        = string
+  default     = null
 }
 
 variable "nodes" {
   description = "map of nodes to be created in this nodepool"
   type        = map(object({
-    recreate = optional(bool)
+    last_recreated_at = optional(number)
   }))
 }

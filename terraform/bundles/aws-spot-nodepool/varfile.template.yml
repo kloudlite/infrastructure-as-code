@@ -12,6 +12,7 @@ root_volume_size: 80
 root_volume_type: gp3
 
 spot_fleet_tagging_role_name: aws-ec2-spot-fleet-tagging-role
+security_groups: [ ]
 
 cpu_node:
   vcpu:
@@ -22,5 +23,5 @@ cpu_node:
     max: 2
 
 nodes:
-  spot-1: {last_recreated_at: 2}
-  spot-2: {}
+  spot-1: {user_data: "", last_recreated_at: 1}
+  spot-2: {user_data: ""}

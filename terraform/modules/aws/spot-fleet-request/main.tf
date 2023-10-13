@@ -58,9 +58,8 @@ resource "aws_launch_template" "spot_template" {
   tag_specifications {
     resource_type = "instance"
     tags          = {
-      Name        = var.node_name
+      Name        = "${var.tracker_id}-${var.node_name}"
       Terraform   = "true"
-      NodeName    = var.node_name
       ReferenceId = var.tracker_id
     }
   }

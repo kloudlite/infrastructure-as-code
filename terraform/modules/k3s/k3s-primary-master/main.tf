@@ -53,7 +53,7 @@ primaryMaster:
   token: ${random_password.k3s_token.result}
   nodeName: ${var.node_name}
   labels: ${jsonencode(var.node_labels)}
-  SANs: ${jsonencode(concat([var.public_dns_hostname], var.k3s_master_nodes_public_ips))}
+  SANs: ${jsonencode(concat([var.public_dns_host], var.k3s_master_nodes_public_ips))}
   extraServerArgs: ${jsonencode(concat([
     "--disable-helm-controller",
     "--disable", "traefik",

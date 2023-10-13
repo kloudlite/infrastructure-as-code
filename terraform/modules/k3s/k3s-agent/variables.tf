@@ -8,8 +8,8 @@ variable "k3s_token" {
   type        = string
 }
 
-variable "agent_nodes" {
-  description = "The list of agent nodes"
+variable "ssh_params" {
+  description = "ssh params"
   type        = map(object({
     public_ip  = string
     ssh_params = object({
@@ -19,6 +19,12 @@ variable "agent_nodes" {
     node_labels = map(string)
   }))
 }
+
+#variable "agent_nodes" {
+#  description = "The list of agent nodes"
+#  type        = map(object({
+#  }))
+#}
 
 variable "use_cloudflare_nameserver" {
   description = "use cloudflare nameserver: 1.1.1.1"
