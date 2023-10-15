@@ -72,6 +72,32 @@ spot_nodes_config:
       enabled: false
       instance_types: [ ]
 
+  spot-4-cpu:
+    vcpu:
+      min: 4
+      max: 6
+    memory_per_vcpu:
+      min: 4
+      max: 4
+    root_volume_size: 100
+    allow_public_ip: true
+    nvidia_gpu:
+      enabled: false
+      instance_types: [ ]
+
+  spot-5-cpu:
+    vcpu:
+      min: 4
+      max: 6
+    memory_per_vcpu:
+      min: 4
+      max: 4
+    root_volume_size: 100
+    allow_public_ip: true
+    nvidia_gpu:
+      enabled: false
+      instance_types: [ ]
+
 disable_ssh: false
 
 kloudlite_release: v1.0.5-nightly
