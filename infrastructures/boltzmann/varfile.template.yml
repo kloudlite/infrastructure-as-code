@@ -40,13 +40,14 @@ spot_settings:
   spot_fleet_tagging_role_name: aws-ec2-spot-fleet-tagging-role
 
 spot_nodes_config:
-  spot-1-gpu:
-    root_volume_size: 200
-    allow_public_ip: true
-    nvidia_gpu:
-      enabled: true
-      instance_types:
-        - g5.xlarge
+  # spot-1-gpu:
+  #   root_volume_size: 200
+  #   allow_public_ip: true
+  #   nvidia_gpu:
+  #     enabled: true
+  #     instance_types:
+  #       - g5.xlarge
+
   spot-2-cpu:
     vcpu:
       min: 4
@@ -97,6 +98,30 @@ spot_nodes_config:
     nvidia_gpu:
       enabled: false
       instance_types: [ ]
+
+  spot-6-gpu:
+    root_volume_size: 200
+    allow_public_ip: true
+    nvidia_gpu:
+      enabled: true
+      instance_types:
+        - g4dn.xlarge
+
+  spot-7-gpu:
+    root_volume_size: 200
+    allow_public_ip: true
+    nvidia_gpu:
+      enabled: true
+      instance_types:
+        - g4dn.xlarge
+
+  spot-8-gpu:
+    root_volume_size: 200
+    allow_public_ip: true
+    nvidia_gpu:
+      enabled: true
+      instance_types:
+        - g4dn.xlarge
 
 disable_ssh: false
 
