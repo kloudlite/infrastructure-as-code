@@ -4,28 +4,6 @@ If you need to change any variable, please edit the corresponding variables in t
 If you want to create new variables, please create them in other files
 */
 
-variable "aws_access_key" { type = string }
-variable "aws_secret_key" { type = string }
-
-variable "aws_region" { type = string }
-
-variable "tracker_id" {
-  description = "tracker id, for which this resource is being created"
-  type        = string
-}
-
-variable "k3s_join_token" {
-  description = "k3s join token, that should be used to join the cluster"
-  type        = string
-  default     = ""
-}
-
-variable "k3s_server_public_dns_host" {
-  description = "k3s server public dns host, i.e. k3s server public url"
-  type        = string
-  default     = ""
-}
-
 variable "ec2_nodepools" {
   type = map(object({
     ami                  = string
@@ -79,16 +57,4 @@ variable "spot_nodepools" {
       ((config.cpu_node == null && config.gpu_node != null) || (config.cpu_node != null && config.gpu_node == null))
     ])
   }
-}
-
-variable "save_ssh_key_to_path" {
-  description = "save ssh key to this path"
-  type        = string
-  default     = ""
-}
-
-variable "save_kubeconfig_to_path" {
-  description = "save kubeconfig to this path"
-  type        = string
-  default     = ""
 }

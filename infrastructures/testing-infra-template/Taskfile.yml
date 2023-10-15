@@ -1,6 +1,18 @@
 version: 3
 
+vars:
+  Varsfile: ".secrets/varfile.json"
+
 tasks:
+  create-diff-patch:
+    vars:
+      bundleName:
+        sh: ls ../../terraform/bundles | fzf
+    cmds:
+      - |+
+        diff -u ../../terraform/bundles/{{.bundleName}}/variables.tf ./variables-{{.bundleName}}.tf > ./variables-{{.bundleName}}.tf.diff.patch
+        exit 0
+
   sync-variables:
     vars:
       banner: |+
@@ -20,10 +32,53 @@ tasks:
             chmod 600 "./variables-$bundleName.tf"
           fi
           if [ -d "$bundlePath" ]; then
-            cat > "./variables-$bundleName.tf" <<EOF
+            patchFile="./variables-$bundleName.tf.diff.patch"
+            if [ -f "$patchFile" ]; then
+              patch $bundlePath/variables.tf  < ./variables-$bundleName.tf.diff.patch --output=- > ./variables-$bundleName.tf
+            else 
+              cat > "./variables-$bundleName.tf" <<EOF
         {{.banner}}
         EOF
-            cat "$bundlePath"/variables.tf >> "./variables-$bundleName.tf"
+              cat $bundlePath/variables.tf >> ./variables-$bundleName.tf
+            fi
             chmod 400 "./variables-$bundleName.tf"
           fi
         done
+
+  init:
+    cmds:
+      - terraform init
+    silent: true
+
+  plan:
+    dir: ./
+    vars:
+      PlanOutput: ".secrets/plan.out"
+    cmds:
+      - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
+      - terraform plan --var-file "{{.Varsfile}}" --out "{{.PlanOutput}}"
+
+  apply:
+    dir: ./
+    dotenv:
+      - .secrets/env
+    vars:
+      PlanOutput: ".secrets/plan.out"
+    cmds:
+      - terraform apply "{{.PlanOutput}}"
+
+  validate:
+    dir: ./
+    cmds:
+      - terraform validate  -var-file={{.Varsfile}}
+
+  destroy:
+    dir: ./
+    dotenv:
+      - .secrets/env
+    vars:
+      PlanOutput: ".secrets/plan.destroy.out"
+    cmds:
+      - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
+      - terraform plan --var-file={{.Varsfile}} --destroy --out "{{.PlanOutput}}"
+      - terraform apply "{{.PlanOutput}}"
