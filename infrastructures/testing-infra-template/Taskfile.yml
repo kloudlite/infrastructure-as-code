@@ -3,6 +3,9 @@ version: 3
 vars:
   Varsfile: ".secrets/varfile.json"
 
+dotenv:
+  - .secrets/env
+
 tasks:
   create-diff-patch:
     vars:

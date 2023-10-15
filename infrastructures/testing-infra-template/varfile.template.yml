@@ -37,69 +37,40 @@ k3s_masters:
       availability_zone: ap-south-1b
       # last_recreated_at: 0
 
-# ec2_nodepools:
-#   np-1:
-#     ami: ami-06d146e85d1709abb
-#     ami_ssh_username: ubuntu
-#     availability_zone: "ap-south-1a"
-#     instance_type: "c6a.large"
-#     nvidia_gpu_enabled: false
-#     root_volume_type: gp3
-#     root_volume_size: 50
-#     iam_instance_profile: ""
-#     nodes:
-#       node-1: { last_recreated_at: 3 }
-#   np-2:
-#     ami: ami-06d146e85d1709abb
-#     ami_ssh_username: ubuntu
-#     availability_zone: "ap-south-1b"
-#     instance_type: "c6a.large"
-#     nvidia_gpu_enabled: false
-#     root_volume_type: gp3
-#     root_volume_size: 50
-#     iam_instance_profile: ""
-#     nodes:
-#       node-1: { last_recreated_at: 3 }
-#
-# spot_nodepools:
-#   spot-np-1:
-#     ami: ami-06d146e85d1709abb
-#     ami_ssh_username: ubuntu
-#     availability_zone: "ap-south-1b"
-#     nvidia_gpu_enabled: false
-#     root_volume_type: gp3
-#     root_volume_size: 50
-#     spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
-#     cpu_node:
-#       vcpu:
-#         min: 1
-#         max: 2
-#       memory_per_vcpu:
-#         min: 2
-#         max: 4
-#     nodes:
-#       node-1: { last_recreated_at: 3 }
-#   spot-np-2:
-#     ami: ami-06d146e85d1709abb
-#     ami_ssh_username: ubuntu
-#     availability_zone: "ap-south-1a"
-#     nvidia_gpu_enabled: false
-#     root_volume_type: gp3
-#     root_volume_size: 80
-#     spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
-#     gpu_node:
-#       instance_types: [g5.xlarge]
-#     # cpu_node:
-#     #   vcpu:
-#     #     min: 1
-#     #     max: 2
-#     #   memory_per_vcpu:
-#     #     min: 2
-#     #     max: 4
-#     nodes:
-#       node-1: { last_recreated_at: 3 }
+ec2_nodepools:
+  np-1:
+    ami: ami-06d146e85d1709abb
+    ami_ssh_username: ubuntu
+    availability_zone: "ap-south-1a"
+    instance_type: "c6a.large"
+    nvidia_gpu_enabled: false
+    root_volume_type: gp3
+    root_volume_size: 50
+    iam_instance_profile: ""
+    nodes:
+      node-1: {}
+      node-2: {}
 
-enable_nvidia_gpu_support: true
+spot_nodepools:
+  spot-np-1:
+    ami: ami-06d146e85d1709abb
+    ami_ssh_username: ubuntu
+    availability_zone: "ap-south-1b"
+    nvidia_gpu_enabled: false
+    root_volume_type: gp3
+    root_volume_size: 50
+    spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
+    cpu_node:
+      vcpu:
+        min: 1
+        max: 2
+      memory_per_vcpu:
+        min: 2
+        max: 4
+    nodes:
+      node-1: { last_recreated_at: 3 }
+
+enable_nvidia_gpu_support: false
 kloudlite_params:
   release: v1.0.5-nightly
   install_crds: true

@@ -45,6 +45,7 @@ resource "aws_key_pair" "k3s_nodes_ssh_key" {
 module "aws-security-groups" {
   source                                = "../../modules/aws/security-groups"
   depends_on                            = [null_resource.variable_validations]
+  create_group_for_k3s_masters          = true
   allow_incoming_http_traffic_on_master = true
   allow_metrics_server_on_master        = true
   expose_k8s_node_ports_on_master       = true

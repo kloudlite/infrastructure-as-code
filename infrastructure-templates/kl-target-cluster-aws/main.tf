@@ -11,6 +11,7 @@ module "kl-master-nodes-on-aws" {
 
 module "kl-worker-nodes-on-aws" {
   source         = "../../terraform/bundles/kl-worker-nodes-on-aws"
+  depends_on     = [module.kl-master-nodes-on-aws.k3s_token]
   aws_access_key = var.aws_access_key
   aws_secret_key = var.aws_secret_key
   aws_region     = var.aws_region
