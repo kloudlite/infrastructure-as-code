@@ -12,7 +12,7 @@
 #}
 
 module "spot-fleet-request" {
-  source                       = "../../modules/aws/spot-fleet-request"
+  source                       = "../spot-fleet-request"
   for_each                     = {for name, cfg in var.nodes : name => cfg}
   ami                          = var.ami
   availability_zone            = var.availability_zone
@@ -26,6 +26,6 @@ module "spot-fleet-request" {
   security_groups              = var.security_groups
   spot_fleet_tagging_role_name = var.spot_fleet_tagging_role_name
   ssh_key_name                 = var.ssh_key_name
-  user_data                    = each.value.user_data
+  user_data_base64             = each.value.user_data_base64
   last_recreated_at            = each.value.last_recreated_at != null ? each.value.last_recreated_at : 0
 }

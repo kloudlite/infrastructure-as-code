@@ -1,3 +1,15 @@
+variable "create_group_for_k3s_masters" {
+  description = "create a group for k3s masters"
+  type        = bool
+  default     = false
+}
+
+variable "create_group_for_k3s_workers" {
+  description = "create a group for k3s workers"
+  type        = bool
+  default     = false
+}
+
 variable "tracker_id" {
   description = "tracker id"
   type        = string

@@ -40,7 +40,7 @@ resource "aws_launch_template" "spot_template" {
     ignore_changes = [iam_instance_profile]
   }
 
-  user_data = base64encode(var.user_data)
+  user_data = var.user_data_base64
 
   block_device_mappings {
     device_name = "/dev/sda1"

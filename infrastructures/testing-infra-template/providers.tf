@@ -19,7 +19,7 @@ provider "aws" {
 }
 
 provider "ssh" {
-  debug_log = "/tmp/example-cluster-ssh-debug.log"
+  debug_log = "/tmp/kl-target-cluster-aws-ssh-debug.log"
 }
 
 provider "cloudflare" {

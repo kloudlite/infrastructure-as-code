@@ -32,6 +32,7 @@ resource "ssh_resource" "setup_k3s_on_primary_master" {
 
     if [ "${var.restore_from_latest_s3_snapshot}" = "true" ]; then
       cat > k3s-list-snapshots.sh <<'EOF2'
+
 sudo k3s etcd-snapshot list \
   --s3  \
   --s3-region="${var.backup_to_s3.bucket_region}" \
@@ -61,6 +62,7 @@ primaryMaster:
     "--node-external-ip", var.public_ip,
     "--tls-san-security",
     "--flannel-external-ip",
+    "--cluster-domain", var.cluster_internal_dns_host,
   ],
   length(var.node_taints) >  0 ? local.node_taints : [],
 
@@ -80,6 +82,7 @@ primaryMaster:
       "--cluster-reset",
       "--cluster-reset-restore-path", "$latest_snapshot",
   ]:  []
+
 ))}
 
 EOF2
@@ -130,6 +133,7 @@ resource "null_resource" "wait_till_k3s_server_is_ready" {
       break
     done
 
+    echo "[#] k3s server is now fully ready, provisioning a new revocable kubeconfig"
     ./k8s-user-account.sh kubeconfig.yml
 EOC
     ]

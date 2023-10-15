@@ -15,11 +15,11 @@ resource "null_resource" "variable_validations" {
 }
 
 module "constants" {
-  source = "../../terraform/modules/common/constants"
+  source = "../../modules/common/constants"
 }
 
 module "ssh-rsa-key" {
-  source     = "../../terraform/modules/common/ssh-rsa-key"
+  source     = "../../modules/common/ssh-rsa-key"
   depends_on = [null_resource.variable_validations]
 }
 
@@ -43,7 +43,7 @@ resource "aws_key_pair" "k3s_nodes_ssh_key" {
 }
 
 module "aws-security-groups" {
-  source                                = "../../terraform/modules/aws/security-groups"
+  source                                = "../../modules/aws/security-groups"
   depends_on                            = [null_resource.variable_validations]
   allow_incoming_http_traffic_on_master = true
   allow_metrics_server_on_master        = true
@@ -57,7 +57,7 @@ module "aws-security-groups" {
 }
 
 module "k3s-masters-nodepool" {
-  source             = "../../terraform/modules/aws/aws-ec2-nodepool"
+  source             = "../../modules/aws/aws-ec2-nodepool"
   depends_on         = [null_resource.variable_validations]
   instance_type      = var.k3s_masters.instance_type
   nodes              = {for name, cfg in var.k3s_masters.nodes : name => { last_recreated_at : cfg.last_recreated_at }}
@@ -71,73 +71,7 @@ module "k3s-masters-nodepool" {
 }
 
 module "k3s-templates" {
-  source = "../../terraform/modules/k3s/k3s-templates"
-}
-
-module "aws-ec2-nodepool" {
-  source               = "../../terraform/modules/aws/aws-ec2-nodepool"
-  depends_on           = [module.k3s-primary-master]
-  for_each             = {for np_name, np_config in var.ec2_nodepools : np_name => np_config}
-  tracker_id           = "${var.tracker_id}-${each.key}"
-  ami                  = each.value.ami
-  availability_zone    = each.value.availability_zone
-  iam_instance_profile = each.value.iam_instance_profile
-  instance_type        = each.value.instance_type
-  nvidia_gpu_enabled   = each.value.nvidia_gpu_enabled
-  root_volume_size     = each.value.root_volume_size
-  root_volume_type     = each.value.root_volume_type
-  security_groups      = module.aws-security-groups.sg_for_k3s_masters_names
-  ssh_key_name         = aws_key_pair.k3s_nodes_ssh_key.key_name
-  nodes                = {
-    for name, cfg in each.value.nodes : name => {
-      user_data_base64 = base64encode(templatefile(module.k3s-templates.k3s-agent-template-path, {
-        tf_public_ip            = "not-known"
-        tf_k3s_masters_dns_host = var.k3s_masters.public_dns_host
-        tf_k3s_token            = module.k3s-primary-master.k3s_token
-        tf_node_labels          = jsonencode(merge(local.common_node_labels, {
-          (module.constants.node_labels.provider_az)   = each.value.availability_zone,
-          (module.constants.node_labels.node_has_role) = "agent"
-          (module.constants.node_labels.node_is_spot)  = "true"
-        }))
-        tf_node_name                 = "${each.key}-${name}"
-        tf_use_cloudflare_nameserver = true
-      }))
-      last_recreated_at = cfg.last_recreated_at
-    }
-  }
-}
-
-module "aws-spot-nodepool" {
-  source                       = "../../terraform/modules/aws/aws-spot-nodepool"
-  depends_on                   = [module.k3s-primary-master]
-  for_each                     = {for np_name, np_config in var.spot_nodepools : np_name => np_config}
-  tracker_id                   = "${var.tracker_id}-${each.key}"
-  ami                          = each.value.ami
-  availability_zone            = each.value.availability_zone
-  root_volume_size             = each.value.root_volume_size
-  root_volume_type             = each.value.root_volume_type
-  security_groups              = module.aws-security-groups.sg_for_k3s_masters_ids
-  spot_fleet_tagging_role_name = each.value.spot_fleet_tagging_role_name
-  ssh_key_name                 = aws_key_pair.k3s_nodes_ssh_key.key_name
-  cpu_node                     = each.value.cpu_node
-  gpu_node                     = each.value.gpu_node
-  nodes                        = {
-    for name, cfg in each.value.nodes : name => {
-      user_data_base64 = base64encode(templatefile(module.k3s-templates.k3s-agent-template-path, {
-        tf_public_ip            = "not-known"
-        tf_k3s_masters_dns_host = var.k3s_masters.public_dns_host
-        tf_k3s_token            = module.k3s-primary-master.k3s_token
-        tf_node_labels          = jsonencode(merge(local.common_node_labels, {
-          (module.constants.node_labels.provider_az)   = each.value.availability_zone,
-          (module.constants.node_labels.node_has_role) = "agent"
-          (module.constants.node_labels.node_is_spot)  = "true"
-        }))
-        tf_node_name                 = "${each.key}-${name}"
-        tf_use_cloudflare_nameserver = true
-      }))
-      last_recreated_at = cfg.last_recreated_at
-    }
-  }
+  source = "../../modules/k3s/k3s-templates"
 }
 
 locals {
@@ -154,7 +88,7 @@ locals {
 }
 
 module "k3s-primary-master" {
-  source     = "../../terraform/modules/k3s/k3s-primary-master"
+  source     = "../../modules/k3s/k3s-primary-master"
   depends_on = [module.k3s-masters-nodepool]
 
   node_name  = local.primary_master_node_name
@@ -203,7 +137,7 @@ resource "null_resource" "save_kubeconfig" {
 }
 
 module "k3s-secondary-master" {
-  source   = "../../terraform/modules/k3s/k3s-secondary-master"
+  source   = "../../modules/k3s/k3s-secondary-master"
   for_each = {
     for node_name, node_cfg in var.k3s_masters.nodes : node_name => node_cfg
     if node_cfg.role == "secondary-master"
@@ -249,7 +183,7 @@ module "k3s-secondary-master" {
 
 module "cloudflare-dns" {
   count  = var.k3s_masters.cloudflare.enabled ? 1 : 0
-  source = "../../terraform/modules/cloudflare/dns"
+  source = "../../modules/cloudflare/dns"
 
   depends_on = [module.k3s-masters-nodepool]
 
@@ -263,7 +197,7 @@ module "cloudflare-dns" {
 
 module "kloudlite-crds" {
   count             = var.kloudlite_params.install_crds ? 1 : 0
-  source            = "../../terraform/modules/kloudlite/crds"
+  source            = "../../modules/kloudlite/crds"
   kloudlite_release = var.kloudlite_params.release
   depends_on        = [module.k3s-primary-master]
   ssh_params        = {
@@ -275,7 +209,7 @@ module "kloudlite-crds" {
 
 module "helm-aws-ebs-csi" {
   count           = var.kloudlite_params.install_csi_driver ? 1 : 0
-  source          = "../../terraform/modules/helm-charts/helm-aws-ebs-csi"
+  source          = "../../modules/helm-charts/helm-aws-ebs-csi"
   depends_on      = [module.kloudlite-crds]
   storage_classes = {
     "sc-xfs" : {
@@ -299,7 +233,7 @@ module "helm-aws-ebs-csi" {
 
 module "nvidia-container-runtime" {
   count      = var.enable_nvidia_gpu_support ? 1 : 0
-  source     = "../../terraform/modules/nvidia-container-runtime"
+  source     = "../../modules/nvidia-container-runtime"
   depends_on = [module.kloudlite-crds]
   ssh_params = {
     public_ip   = module.k3s-primary-master.public_ip
@@ -313,7 +247,7 @@ module "nvidia-container-runtime" {
 
 module "kloudlite-operators" {
   count             = var.kloudlite_params.install_operators ? 1 : 0
-  source            = "../../terraform/modules/helm-charts/kloudlite-operators"
+  source            = "../../modules/helm-charts/kloudlite-operators"
   depends_on        = [module.kloudlite-crds]
   kloudlite_release = var.kloudlite_params.release
   node_selector     = {}
@@ -326,7 +260,7 @@ module "kloudlite-operators" {
 
 module "kloudlite-agent" {
   count                              = var.kloudlite_params.install_agent ? 1 : 0
-  source                             = "../../terraform/modules/kloudlite/helm-agent"
+  source                             = "../../modules/kloudlite/helm-agent"
   kloudlite_account_name             = var.kloudlite_params.agent_vars.account_name
   kloudlite_cluster_name             = var.kloudlite_params.agent_vars.cluster_name
   kloudlite_cluster_token            = var.kloudlite_params.agent_vars.cluster_token

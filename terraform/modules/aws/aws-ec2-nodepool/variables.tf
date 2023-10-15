@@ -53,6 +53,7 @@ variable "iam_instance_profile" {
 variable "nodes" {
   description = "map of nodes to be created in this nodepool"
   type        = map(object({
+    user_data_base64  = optional(string)
     last_recreated_at = optional(number)
   }))
 }

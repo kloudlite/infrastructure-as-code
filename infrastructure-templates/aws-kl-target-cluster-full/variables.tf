@@ -1,6 +1,7 @@
-variable "aws_region" { type = string }
 variable "aws_access_key" { type = string }
 variable "aws_secret_key" { type = string }
+
+variable "aws_region" { type = string }
 
 variable "tracker_id" {
   description = "tracker id, for which this resource is being created"
@@ -9,7 +10,7 @@ variable "tracker_id" {
 
 variable "k3s_masters" {
   description = "k3s masters configuration"
-  type = object({
+  type        = object({
     ami                  = string
     ami_ssh_username     = string
     instance_type        = string
@@ -48,7 +49,7 @@ variable "k3s_masters" {
 
   validation {
     error_message = "when backup_to_s3 is enabled, all the following variables must be set: bucket_name, bucket_region, bucket_folder"
-    condition = var.k3s_masters.backup_to_s3.enabled == false || alltrue([
+    condition     = var.k3s_masters.backup_to_s3.enabled == false || alltrue([
       var.k3s_masters.backup_to_s3.bucket_name != "",
       var.k3s_masters.backup_to_s3.bucket_region != "",
       var.k3s_masters.backup_to_s3.bucket_folder != "",
@@ -57,7 +58,7 @@ variable "k3s_masters" {
 
   validation {
     error_message = "if enabled, all mandatory Cloudflare bucket details are specified"
-    condition = var.k3s_masters.cloudflare == null || (var.k3s_masters.cloudflare.enabled == true && alltrue([
+    condition     = var.k3s_masters.cloudflare == null || (var.k3s_masters.cloudflare.enabled == true && alltrue([
       var.k3s_masters.cloudflare.api_token != "",
       var.k3s_masters.cloudflare.zone_id != "",
       var.k3s_masters.cloudflare.domain != "",
@@ -66,7 +67,6 @@ variable "k3s_masters" {
 }
 
 variable "ec2_nodepools" {
-  description = "ec2_nodepools"
   type = map(object({
     ami                  = string
     ami_ssh_username     = string
@@ -76,15 +76,13 @@ variable "ec2_nodepools" {
     root_volume_size     = string
     root_volume_type     = string
     iam_instance_profile = optional(string)
-    nodes = map(object({
+    nodes                = map(object({
       last_recreated_at = optional(number)
     }))
   }))
-  default = {}
 }
 
 variable "spot_nodepools" {
-  description = "nodepools for spot instances"
   type = map(object({
     ami                          = string
     ami_ssh_username             = string
@@ -114,8 +112,6 @@ variable "spot_nodepools" {
     }))
   }))
 
-  default = {}
-
   #  validation {
   #    error_message = "a nodepool can be either a cpu_node or a gpu_node, only one of them can be set at once"
   #    condition     = [
@@ -131,14 +127,14 @@ variable "spot_nodepools" {
 
 variable "kloudlite_params" {
   description = "kloudlite related parameters"
-  type = object({
+  type        = object({
     release            = string
     install_crds       = optional(bool, true)
     install_csi_driver = optional(bool, false)
     install_operators  = optional(bool, false)
 
     install_agent = optional(bool, false)
-    agent_vars = optional(object({
+    agent_vars    = optional(object({
       account_name             = string
       cluster_name             = string
       cluster_token            = string

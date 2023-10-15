@@ -11,6 +11,11 @@ resource "ssh_resource" "setup_k3s_on_secondary_masters" {
   user        = var.ssh_params.user
   private_key = var.ssh_params.private_key
 
+  when = "create"
+
+  timeout     = "2m"
+  retry_delay = "2s"
+
   commands = [
     <<EOT
 if [ "${var.restore_from_latest_s3_snapshot}" == "true" ]; then
@@ -34,8 +39,9 @@ secondaryMaster:
     "--node-external-ip", var.ssh_params.public_ip,
     "--tls-san-security",
     "--flannel-external-ip",
+    "--cluster-domain", var.cluster_internal_dns_host,
   ],
-  length(local.node_taints) >  0 ? local.node_taints: {},
+  length(local.node_taints) >  0 ? local.node_taints: [],
   var.backup_to_s3.enabled ? [
       "--etcd-s3",
       "--etcd-s3-endpoint", "s3.amazonaws.com",

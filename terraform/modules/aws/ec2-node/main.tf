@@ -34,7 +34,7 @@ resource "aws_instance" "ec2_instance" {
 
   depends_on = [null_resource.variable_validation]
 
-  user_data = var.user_data != null ? var.user_data : null
+  user_data_base64 = var.user_data_base64 != "" ? var.user_data_base64 : null
 
   iam_instance_profile = var.iam_instance_profile != "" ? var.iam_instance_profile : null
 

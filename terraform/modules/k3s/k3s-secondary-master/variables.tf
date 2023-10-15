@@ -13,6 +13,11 @@ variable "public_dns_hostname" {
   type        = string
 }
 
+variable "cluster_internal_dns_host" {
+  description = "the internal dns host for the cluster, e.g. cluster.local"
+  type        = string
+}
+
 variable "ssh_params" {
   type = object({
     public_ip   = string

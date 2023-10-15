@@ -18,6 +18,11 @@ variable "public_dns_host" {
   type        = string
 }
 
+variable "cluster_internal_dns_host" {
+  description = "the internal dns host for the cluster, e.g. cluster.local"
+  type        = string
+}
+
 variable "ssh_params" {
   description = "The SSH parameters to use when connecting to the primary master node"
   type        = object({

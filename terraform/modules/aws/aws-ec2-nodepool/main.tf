@@ -1,5 +1,5 @@
 module "ec2-nodes" {
-  source             = "../../modules/aws/ec2-node"
+  source             = "../ec2-node"
   for_each           = {for name, cfg in var.nodes : name => cfg}
   tracker_id         = var.tracker_id
   ami                = var.ami
@@ -12,4 +12,5 @@ module "ec2-nodes" {
   security_groups    = var.security_groups
   last_recreated_at  = each.value.last_recreated_at
   ssh_key_name       = var.ssh_key_name
+  user_data_base64   = each.value.user_data_base64 != null ? each.value.user_data_base64 : ""
 }

@@ -12,10 +12,11 @@ RUN adduser --disabled-password --home="/app" --uid 1717 nonroot
 USER nonroot
 WORKDIR /app
 COPY --chown=nonroot ./terraform ./terraform
-RUN mkdir infrastructures
-COPY --chown=nonroot ./infrastructures ./infrastructures
+RUN mkdir infrastructure-templates
+COPY --chown=nonroot ./infrastructure-templates ./infrastructure-templates
 ENV TF_PLUGIN_CACHE_DIR="/app/.terraform.d/plugin-cache"
 RUN mkdir -p $TF_PLUGIN_CACHE_DIR
+# SHELL ["/bin/bash", "-c"]
 # RUN cat > script.sh <<'EOF'
 #   for dir in $(ls -d ./infrastructures/templates/*); do
 #     pushd $dir
@@ -25,5 +26,8 @@ RUN mkdir -p $TF_PLUGIN_CACHE_DIR
 #   tdir=$(basename $(dirname $TF_PLUGIN_CACHE_DIR))
 #   zip terraform.zip -r $tdir && rm -rf $tdir
 # EOF
-COPY ./build-scripts ./build-scripts
-RUN bash build-scripts/terraform-module-cache.sh
+RUN mkdir build-scripts
+COPY ./build-scripts/terraform-module-cache.sh ./build-scripts/terraform-module-cache.sh
+RUN bash build-scripts/terraform-module-cache.sh ./infrastructure-templates
+ENV TERRAFORM_ZIPFILE="/app/terraform.zip"
+ENV TEMPLATES_DIR="/app/infrastructure-templates"

@@ -66,6 +66,7 @@ locals {
 }
 
 resource "aws_security_group" "k3s_master_sg" {
+  count       = var.create_group_for_k3s_masters ? 1 : 0
   description = "k3s server nodes requirements, source: https://docs.k3s.io/installation/requirements#networking"
   name_prefix = var.tracker_id
 
@@ -163,6 +164,7 @@ resource "aws_security_group" "k3s_master_sg" {
 }
 
 resource "aws_security_group" "k3s_agent_sg" {
+  count       = var.create_group_for_k3s_workers ? 1 : 0
   description = "k3s agent nodes, security group"
   name_prefix = var.tracker_id
 

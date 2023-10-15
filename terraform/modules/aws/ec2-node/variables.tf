@@ -55,8 +55,8 @@ variable "iam_instance_profile" {
   default     = null
 }
 
-variable "user_data" {
-  description = "user_data if applicable"
+variable "user_data_base64" {
+  description = "user_data_base64 if applicable"
   type        = string
   default     = ""
 }

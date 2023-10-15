@@ -75,7 +75,7 @@ variable "gpu_node" {
 variable "nodes" {
   description = "map of nodes"
   type        = map(object({
-    user_data         = string
+    user_data_base64  = string
     last_recreated_at = optional(number)
   }))
 }
