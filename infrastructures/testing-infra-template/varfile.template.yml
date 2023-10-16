@@ -78,4 +78,4 @@ kloudlite_params:
   install_operators: true
 
 save_ssh_key_to_path: /tmp/example-cluster.pem
-save_kubeconfig_to_path: /tmp/example-cluster-kubeconfig.yml
+save_kubeconfig_to_path: /tmp/k.conf

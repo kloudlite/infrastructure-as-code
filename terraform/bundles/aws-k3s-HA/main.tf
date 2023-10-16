@@ -301,7 +301,7 @@ module "helm-aws-ebs-csi" {
 
 module "kloudlite-operators" {
   count             = var.kloudlite.install_operators ? 1 : 0
-  source            = "../../modules/helm-charts/kloudlite-operators"
+  source            = "../../modules/kloudlite/helm-kloudlite-operators"
   depends_on        = [module.kloudlite-crds]
   kloudlite_release = var.kloudlite.release
   node_selector     = {}
@@ -314,7 +314,7 @@ module "kloudlite-operators" {
 
 module "kloudlite-agent" {
   count                              = var.kloudlite.install_agent ? 1 : 0
-  source                             = "../../modules/kloudlite/helm-agent"
+  source                             = "../../modules/kloudlite/helm-kloudlite-agent"
   kloudlite_account_name             = var.kloudlite.agent_vars.account_name
   kloudlite_cluster_name             = var.kloudlite.agent_vars.cluster_name
   kloudlite_cluster_token            = var.kloudlite.agent_vars.cluster_token

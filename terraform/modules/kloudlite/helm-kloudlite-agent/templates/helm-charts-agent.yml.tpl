@@ -6,6 +6,7 @@ metadata:
     kloudlite.io/created-by: kloudlite-iac
 
 ---
+
 apiVersion: crds.kloudlite.io/v1
 kind: HelmChart
 metadata:
@@ -17,9 +18,12 @@ spec:
   chartRepo:
     name: kloudlite
     url: https://kloudlite.github.io/helm-charts
-  chartName: kloudlite/kloudlite-agent
 
+  chartName: kloudlite/kloudlite-agent
   chartVersion: ${kloudlite_release}
+
+  jobVars:
+    tolerations: ${jsonencode(helm_job_tolerations)}
 
   valuesYaml: |+
     imagePullPolicy: Always
@@ -34,8 +38,8 @@ spec:
     clusterToken: ${kloudlite_cluster_token}
     
     # -- (string) kloudlite issued access token (if already have)
-    #accessToken: {{$klo}}
-    
+    #accessToken: ""
+
     # -- (string) cluster identity secret name, which keeps cluster token and access token
     clusterIdentitySecretName: kl-cluster-identity
     

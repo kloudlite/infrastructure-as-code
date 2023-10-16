@@ -1,3 +1,7 @@
+module "constants" {
+  source = "../../common/constants"
+}
+
 resource "ssh_resource" "apply_kloudlite_crds" {
   host        = var.ssh_params.public_ip
   user        = var.ssh_params.username
@@ -24,6 +28,7 @@ resource "ssh_resource" "apply_kloudlite_crds" {
       kloudlite_cluster_token            = var.kloudlite_cluster_token
       kloudlite_message_office_grpc_addr = var.kloudlite_message_office_grpc_addr
       kloudlite_dns_host                 = var.kloudlite_dns_host
+      helm_job_tolerations               = module.constants.master_node_tolerations
     })
     destination = "manifests/helm-charts-kloudlite-agent.yml"
   }

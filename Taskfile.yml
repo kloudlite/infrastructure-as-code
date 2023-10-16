@@ -20,8 +20,6 @@ tasks:
       - podman buildx build -t {{.Image}} .
       - podman push {{.Image}}
 
-
-
   tf:download:kubeconfig:dev:
     vars:
       AuthToken: "{{.TF_TOKEN_app_terraform_io}}"

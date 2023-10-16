@@ -7,6 +7,7 @@ module "kl-master-nodes-on-aws" {
   k3s_masters               = var.k3s_masters
   kloudlite_params          = var.kloudlite_params
   tracker_id                = "${var.tracker_id}-master"
+  save_kubeconfig_to_path   = var.save_kubeconfig_to_path
 }
 
 module "kl-worker-nodes-on-aws" {

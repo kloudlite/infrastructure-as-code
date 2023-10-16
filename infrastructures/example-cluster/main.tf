@@ -313,7 +313,7 @@ module "nvidia-container-runtime" {
 
 module "kloudlite-operators" {
   count             = var.kloudlite_params.install_operators ? 1 : 0
-  source            = "../../terraform/modules/helm-charts/kloudlite-operators"
+  source            = "../../terraform/modules/kloudlite/helm-kloudlite-operators"
   depends_on        = [module.kloudlite-crds]
   kloudlite_release = var.kloudlite_params.release
   node_selector     = {}
@@ -326,7 +326,7 @@ module "kloudlite-operators" {
 
 module "kloudlite-agent" {
   count                              = var.kloudlite_params.install_agent ? 1 : 0
-  source                             = "../../terraform/modules/kloudlite/helm-agent"
+  source                             = "../../terraform/modules/kloudlite/helm-kloudlite-agent"
   kloudlite_account_name             = var.kloudlite_params.agent_vars.account_name
   kloudlite_cluster_name             = var.kloudlite_params.agent_vars.cluster_name
   kloudlite_cluster_token            = var.kloudlite_params.agent_vars.cluster_token

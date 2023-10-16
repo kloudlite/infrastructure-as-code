@@ -29,6 +29,11 @@ spec:
                       - "true"
               weight: 1
 
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+
       containers:
         - args:
             - --secure-listen-address=0.0.0.0:8443
