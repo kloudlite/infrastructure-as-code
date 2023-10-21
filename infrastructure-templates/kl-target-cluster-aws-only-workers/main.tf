@@ -9,4 +9,5 @@ module "kl-worker-nodes-on-aws" {
   k3s_server_public_dns_host = var.k3s_server_public_dns_host
   spot_nodepools             = var.spot_nodepools
   tracker_id                 = "${var.tracker_id}-worker"
+  extra_agent_args           = var.extra_agent_args
 }

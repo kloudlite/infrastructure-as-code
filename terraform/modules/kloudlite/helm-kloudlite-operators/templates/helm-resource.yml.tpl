@@ -14,11 +14,21 @@ spec:
     url: https://kloudlite.github.io/helm-charts
 
   chartName: kloudlite/kloudlite-operators
-  
+
   chartVersion: ${kloudlite_release}
+
+  jobVars:
+    backOffLimit: 1
+    # tolerate any taints
+    tolerations:
+      - operator: "Exists"
 
   valuesYaml: |+
     preferOperatorsOnMasterNodes: true
+    # tolerate any taints
+    tolerations:
+    - operator: "Exists"
+
     operators:
       helmChartsOperator:
         enabled: false

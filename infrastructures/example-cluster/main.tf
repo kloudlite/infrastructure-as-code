@@ -170,7 +170,7 @@ module "k3s-primary-master" {
     (module.constants.node_labels.node_has_role) : var.k3s_masters.nodes[local.primary_master_node_name].role,
   })
 
-  node_taints = var.k3s_masters.taint_master_nodes ? module.constants.master_node_taints : {}
+  node_taints = var.k3s_masters.taint_master_nodes ? module.constants.master_node_taints : []
 
   k3s_master_nodes_public_ips = [module.k3s-masters-nodepool.public_ips[local.primary_master_node_name]]
   backup_to_s3                = {
@@ -217,7 +217,7 @@ module "k3s-secondary-master" {
   depends_on = [module.k3s-primary-master]
 
   node_name   = each.key
-  node_taints = var.k3s_masters.taint_master_nodes ? module.constants.master_node_taints : {}
+#  node_taints = var.k3s_masters.taint_master_nodes ? module.constants.master_node_taints : {}
   ssh_params  = {
     public_ip   = module.k3s-masters-nodepool.public_ips[each.key]
     user        = var.k3s_masters.ami_ssh_username
@@ -287,9 +287,6 @@ module "helm-aws-ebs-csi" {
       fs_type     = "ext4"
     },
   }
-  node_selector = {
-    (module.constants.node_labels.node_has_role) : "agent"
-  }
   ssh_params = {
     public_ip   = module.k3s-primary-master.public_ip
     username    = var.k3s_masters.ami_ssh_username
@@ -306,9 +303,10 @@ module "nvidia-container-runtime" {
     user        = var.k3s_masters.ami_ssh_username
     private_key = module.ssh-rsa-key.private_key
   }
-  gpu_nodes_selector = {
+  gpu_node_selector = {
     (module.constants.node_labels.node_has_gpu) : "true"
   }
+  gpu_node_tolerations = []
 }
 
 module "kloudlite-operators" {

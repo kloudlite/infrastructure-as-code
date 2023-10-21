@@ -1,3 +1,8 @@
+variable "kloudlite_release" {
+  description = "Kloudlite release to deploy"
+  type        = string
+}
+
 variable "spot_nodes_selector" {
   description = "node selector for spot nodes"
   type        = map(string)

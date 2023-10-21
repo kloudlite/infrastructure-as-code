@@ -11,12 +11,18 @@ output "k3s_public_dns_host" {
   value = var.k3s_masters.public_dns_host
 }
 
-output "k3s_token" {
+output "k3s_server_token" {
   sensitive = true
-  value     = module.k3s-primary-master.k3s_token
+  value     = module.k3s-masters.k3s_server_token
 }
+
+output "k3s_agent_token" {
+  sensitive = true
+  value     = module.k3s-masters.k3s_agent_token
+}
+
 
 output "kubeconfig" {
   sensitive = true
-  value     = module.k3s-primary-master.kubeconfig_with_public_host
+  value     = module.k3s-masters.kubeconfig_with_public_host
 }

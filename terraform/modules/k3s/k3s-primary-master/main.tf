@@ -5,8 +5,8 @@ resource "random_password" "k3s_token" {
 
 locals {
   node_taints = flatten([
-    for k, taint in var.node_taints : [
-      "--node-taint", "${k}=${taint.value}:${taint.effect}",
+    for taint in var.node_taints : [
+      "${taint.key}=${taint.value}:${taint.effect}",
     ]
   ])
 }
@@ -55,6 +55,7 @@ primaryMaster:
   nodeName: ${var.node_name}
   labels: ${jsonencode(var.node_labels)}
   SANs: ${jsonencode(concat([var.public_dns_host], var.k3s_master_nodes_public_ips))}
+  taints: ${jsonencode(local.node_taints)}
   extraServerArgs: ${jsonencode(concat([
     "--disable-helm-controller",
     "--disable", "traefik",
@@ -64,8 +65,6 @@ primaryMaster:
     "--flannel-external-ip",
     "--cluster-domain", var.cluster_internal_dns_host,
   ],
-  length(var.node_taints) >  0 ? local.node_taints : [],
-
   var.backup_to_s3.enabled ? [
       "--etcd-s3",
       "--etcd-s3-endpoint", "s3.amazonaws.com",

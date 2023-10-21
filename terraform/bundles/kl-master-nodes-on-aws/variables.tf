@@ -92,6 +92,12 @@ variable "kloudlite_params" {
   }
 }
 
+variable "extra_server_args" {
+  description = "extra server args to pass to k3s server"
+  type        = list(string)
+  default     = []
+}
+
 variable "enable_nvidia_gpu_support" {
   description = "enable nvidia gpu support"
   type        = bool

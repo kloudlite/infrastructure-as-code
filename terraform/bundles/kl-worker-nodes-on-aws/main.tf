@@ -39,6 +39,7 @@ resource "null_resource" "save_ssh_key" {
   depends_on = [module.ssh-rsa-key]
 
   provisioner "local-exec" {
+    quiet   = true
     command = "echo '${module.ssh-rsa-key.private_key}' > ${var.save_ssh_key_to_path} && chmod 600 ${var.save_ssh_key_to_path}"
   }
 }
@@ -48,7 +49,7 @@ resource "random_id" "id" {
   depends_on  = [null_resource.variable_validations]
 }
 
-resource "aws_key_pair" "k3s_nodes_ssh_key" {
+resource "aws_key_pair" "k3s_worker_nodes_ssh_key" {
   key_name   = "${var.tracker_id}-${random_id.id.hex}-ssh-key"
   public_key = module.ssh-rsa-key.public_key
   depends_on = [null_resource.variable_validations]
@@ -84,9 +85,10 @@ module "k3s-templates" {
 }
 
 module "aws-ec2-nodepool" {
-  source               = "../../modules/aws/aws-ec2-nodepool"
-  depends_on           = [null_resource.variable_validations]
-  for_each             = {for np_name, np_config in var.ec2_nodepools : np_name => np_config}
+  source     = "../../modules/aws/aws-ec2-nodepool"
+  depends_on = [null_resource.variable_validations]
+  for_each   = {for np_name, np_config in var.ec2_nodepools : np_name => np_config}
+
   tracker_id           = "${var.tracker_id}-${each.key}"
   ami                  = each.value.ami
   availability_zone    = each.value.availability_zone
@@ -95,21 +97,32 @@ module "aws-ec2-nodepool" {
   nvidia_gpu_enabled   = each.value.nvidia_gpu_enabled
   root_volume_size     = each.value.root_volume_size
   root_volume_type     = each.value.root_volume_type
-  security_groups      = module.aws-security-groups.sg_for_k3s_masters_names
-  ssh_key_name         = aws_key_pair.k3s_nodes_ssh_key.key_name
+  security_groups      = module.aws-security-groups.sg_for_k3s_agents_names
+  ssh_key_name         = aws_key_pair.k3s_worker_nodes_ssh_key.key_name
   nodes                = {
     for name, cfg in each.value.nodes : name => {
       user_data_base64 = base64encode(templatefile(module.k3s-templates.k3s-agent-template-path, {
         tf_public_ip            = "not-known"
         tf_k3s_masters_dns_host = var.k3s_server_public_dns_host
         tf_k3s_token            = var.k3s_join_token
-        tf_node_labels          = jsonencode(merge(local.common_node_labels, {
-          (module.constants.node_labels.provider_az)   = each.value.availability_zone,
-          (module.constants.node_labels.node_has_role) = "agent"
-          (module.constants.node_labels.node_is_spot)  = "true"
-        }))
+        tf_node_taints          = concat([],
+          each.value.node_taints != null ? each.value.node_taints : [],
+          each.value.nvidia_gpu_enabled == true ? module.constants.gpu_node_taints : [],
+        )
+        tf_node_labels = jsonencode(merge(
+          local.common_node_labels,
+          each.value.availability_zone != "" && each.value.availability_zone != null ? {
+            (module.constants.node_labels.provider_az) = each.value.availability_zone
+          } : {},
+          {
+            (module.constants.node_labels.node_has_role) = "agent"
+            (module.constants.node_labels.nodepool_name) : each.key,
+          },
+          each.value.nvidia_gpu_enabled == true ? { (module.constants.node_labels.node_has_gpu) : "true" } : {}
+        ))
         tf_node_name                 = "${each.key}-${name}"
         tf_use_cloudflare_nameserver = true
+        tf_extra_agent_args          = var.extra_agent_args
       }))
       last_recreated_at = cfg.last_recreated_at
     }
@@ -125,9 +138,9 @@ module "aws-spot-nodepool" {
   availability_zone            = each.value.availability_zone
   root_volume_size             = each.value.root_volume_size
   root_volume_type             = each.value.root_volume_type
-  security_groups              = module.aws-security-groups.sg_for_k3s_masters_ids
+  security_groups              = module.aws-security-groups.sg_for_k3s_agents_ids
   spot_fleet_tagging_role_name = each.value.spot_fleet_tagging_role_name
-  ssh_key_name                 = aws_key_pair.k3s_nodes_ssh_key.key_name
+  ssh_key_name                 = aws_key_pair.k3s_worker_nodes_ssh_key.key_name
   cpu_node                     = each.value.cpu_node
   gpu_node                     = each.value.gpu_node
   nodes                        = {
@@ -136,13 +149,25 @@ module "aws-spot-nodepool" {
         tf_public_ip            = "not-known"
         tf_k3s_masters_dns_host = var.k3s_server_public_dns_host
         tf_k3s_token            = var.k3s_join_token
-        tf_node_labels          = jsonencode(merge(local.common_node_labels, {
-          (module.constants.node_labels.provider_az)   = each.value.availability_zone,
-          (module.constants.node_labels.node_has_role) = "agent"
-          (module.constants.node_labels.node_is_spot)  = "true"
-        }))
+        tf_node_taints          = concat([],
+          each.value.node_taints != null ? each.value.node_taints : [],
+          each.value.gpu_node != null ? module.constants.gpu_node_taints : [],
+        )
+        tf_node_labels = jsonencode(merge(
+          local.common_node_labels,
+          each.value.availability_zone != "" && each.value.availability_zone != null ? {
+            (module.constants.node_labels.provider_az) = each.value.availability_zone
+          } : {},
+          {
+            (module.constants.node_labels.node_has_role) = "agent"
+            (module.constants.node_labels.node_is_spot)  = "true"
+            (module.constants.node_labels.nodepool_name) : each.key,
+          },
+          each.value.gpu_node != null ? { (module.constants.node_labels.node_has_gpu) : "true" } : {}
+        ))
         tf_node_name                 = "${each.key}-${name}"
         tf_use_cloudflare_nameserver = true
+        tf_extra_agent_args          = var.extra_agent_args
       }))
       last_recreated_at = cfg.last_recreated_at
     }

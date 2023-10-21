@@ -79,49 +79,8 @@ variable "gpu_node" {
   default = null
 }
 
-#check "either_cpu_or_gpu_node" {
-#  assert {
-#    condition     = (var.cpu_node == null && var.gpu_node != null) || (var.cpu_node != null && var.gpu_node == null)
-#    error_message = "a node can be either a cpu_node or a gpu_node, only one of them can be set at once"
-#  }
-#}
-#
-#check "satisifies_minimum_root_volume_size" {
-#  assert {
-#    error_message = "when node is nvidia gpu enabled, root volume size must be greater than 75GiB, otherwise greater than 50Gi"
-#    condition     = var.root_volume_size >= (var.gpu_node != null ? 75 : 50)
-#  }
-#}
-
 variable "last_recreated_at" {
   description = "timestamp when this resource was last recreated, whenever this value changes instance is recreated"
   type        = number
   default     = 0
 }
-
-#variable "node_props" {
-#  description = "node props"
-#  type        = object({
-#    vcpu = optional(object({
-#      min = number
-#      max = number
-#    }))
-#    memory_per_vcpu = optional(object({
-#      min = number
-#      max = number
-#    }))
-#
-#    nvidia_gpu = optional(object({
-#      enabled        = bool
-#      instance_types = list(string)
-#    }))
-#  })
-#
-#  validation {
-#    error_message = "For each spot node configuration, it ensures that if nvidia_gpu is not defined or is enabled, there are valid instance types; and if the nvidia_gpu is either not defined or is disabled, both vCPU and memory per vCPU are specified."
-#    condition     = alltrue([
-#      var.node_props.nvidia_gpu == null || (var.node_props.nvidia_gpu.enabled && length(var.node_props.nvidia_gpu.instance_types) > 0),
-#      (var.node_props.nvidia_gpu == null || !var.node_props.nvidia_gpu.enabled) && var.node_props.vcpu != null && var.node_props.memory_per_vcpu != null,
-#    ])
-#  }
-#}

@@ -1,6 +1,7 @@
 locals {
   nvidia_script = templatefile("${path.module}/scripts/nvidia-gpu-post-k3s-start-without-helm.sh", {
-    TF_GPU_NODES_SELECTOR = jsonencode(var.gpu_nodes_selector)
+    TF_GPU_NODE_TOLERATIONS = jsonencode(var.gpu_node_tolerations)
+    TF_GPU_NODE_SELECTOR    = jsonencode(var.gpu_node_selector)
   })
   destination_path = "./manifests/nvidia-gpu-post-k3s-start.sh"
 }

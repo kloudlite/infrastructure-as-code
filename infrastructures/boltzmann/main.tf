@@ -1,49 +1,27 @@
-module "aws-k3s-HA" {
-  source         = "../../terraform/bundles/aws-k3s-HA"
+module "kl-master-nodes-on-aws" {
+  source                    = "../../terraform/bundles/kl-master-nodes-on-aws"
+  aws_access_key            = var.aws_access_key
+  aws_region                = var.aws_region
+  aws_secret_key            = var.aws_secret_key
+  enable_nvidia_gpu_support = var.enable_nvidia_gpu_support
+  k3s_masters               = var.k3s_masters
+  kloudlite_params          = var.kloudlite_params
+  tracker_id                = "${var.tracker_id}-master"
+  save_kubeconfig_to_path   = var.save_kubeconfig_to_path
+  save_ssh_key_to_path      = var.save_ssh_key_to_path
+}
+
+module "kl-worker-nodes-on-aws" {
+  source         = "../../terraform/bundles/kl-worker-nodes-on-aws"
+  depends_on     = [module.kl-master-nodes-on-aws.k3s_agent_token]
   aws_access_key = var.aws_access_key
   aws_secret_key = var.aws_secret_key
   aws_region     = var.aws_region
 
-  aws_iam_instance_profile_role = var.aws_iam_instance_profile_role
-  aws_ami                       = var.aws_ami
-  aws_nvidia_gpu_ami            = var.aws_nvidia_gpu_ami
-  aws_ami_ssh_username          = "ubuntu"
-
-  ec2_nodes_config = var.ec2_nodes_config
-
-  cloudflare = {
-    enabled   = true
-    api_token = var.cloudflare_api_token
-    domain    = var.cloudflare_domain
-    zone_id   = var.cloudflare_zone_id
-  }
-  k3s_server_dns_hostname = var.cloudflare_domain
-
-  spot_settings = {
-    enabled                      = var.spot_settings.enabled
-    spot_fleet_tagging_role_name = var.spot_settings.spot_fleet_tagging_role_name
-  }
-  spot_nodes_config = var.spot_nodes_config
-
-  disable_ssh      = var.disable_ssh
-  k3s_backup_to_s3 = {
-    enabled = false
-  }
-
-  taint_master_nodes = var.taint_master_nodes
-  kloudlite          = {
-    release            = var.kloudlite_release
-    install_crds       = true
-    install_csi_driver = true
-    install_operators  = true
-    install_agent      = var.kloudlite_agent_vars.install
-    agent_vars         = {
-      account_name             = var.kloudlite_agent_vars.account_name
-      cluster_name             = var.kloudlite_agent_vars.cluster_name
-      cluster_token            = var.kloudlite_agent_vars.cluster_token
-      dns_host                 = var.kloudlite_agent_vars.dns_host
-      message_office_grpc_addr = var.kloudlite_agent_vars.message_office_grpc_addr
-    }
-  }
-  enable_nvidia_gpu_support = var.enable_nvidia_gpu_support
+  ec2_nodepools              = var.ec2_nodepools
+  k3s_join_token             = module.kl-master-nodes-on-aws.k3s_agent_token
+  k3s_server_public_dns_host = module.kl-master-nodes-on-aws.k3s_public_dns_host
+  spot_nodepools             = var.spot_nodepools
+  tracker_id                 = "${var.tracker_id}-agent"
+  save_ssh_key_to_path       = var.worker_save_ssh_key_to_path
 }

@@ -38,11 +38,12 @@ variable "node_labels" {
 
 variable "node_taints" {
   description = "Taints to be added to the nodes"
-  type        = map(object({
-    value  = string
+  type        = list(object({
+    key    = string
+    value  = optional(string)
     effect = string
   }))
-  default = {}
+  default = []
 }
 
 

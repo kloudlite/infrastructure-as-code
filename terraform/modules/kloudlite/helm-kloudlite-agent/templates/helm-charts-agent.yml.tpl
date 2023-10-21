@@ -23,6 +23,7 @@ spec:
   chartVersion: ${kloudlite_release}
 
   jobVars:
+    backOffLimit: 1
     tolerations: ${jsonencode(helm_job_tolerations)}
 
   valuesYaml: |+

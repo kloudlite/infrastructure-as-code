@@ -1,0 +1,83 @@
+tracker_id: "${TRACKER_ID}"
+
+aws_region: ap-south-1
+aws_access_key: ${AWS_ACCESS_KEY_ID}
+aws_secret_key: ${AWS_SECRET_ACCESS_KEY}
+
+k3s_masters:
+  ami: ${AMI_CPU}
+  ami_ssh_username: ubuntu
+  instance_type: "c6a.large"
+  nvidia_gpu_enabled: false
+  root_volume_type: gp3
+  root_volume_size: 50
+  iam_instance_profile: "EC2StorageAccess"
+
+  public_dns_host: ${CLOUDFLARE_DOMAIN}
+  cluster_internal_dns_host: dev.platform.kloudlite.local
+
+  cloudflare:
+    enabled: true
+    api_token: ${CLOUDFLARE_API_TOKEN}
+    zone_id: ${CLOUDFLARE_ZONE_ID}
+    domain: ${CLOUDFLARE_DOMAIN}
+
+  taint_master_nodes: true
+
+  backup_to_s3:
+    enabled: false
+
+  nodes:
+    master-1:
+      role: primary-master
+      availability_zone: ap-south-1a
+
+#ec2_nodepools: { }
+# np-1:
+#   ami: ami-0f5994b4c9f02fea1
+#   ami_ssh_username: ubuntu
+#   availability_zone: "us-east-1a"
+#   instance_type: "c6a.large"
+#   nvidia_gpu_enabled: false
+#   root_volume_type: gp3
+#   root_volume_size: 50
+#   iam_instance_profile: ""
+#   nodes:
+#     node-1: { }
+#     node-2: { }
+
+#spot_nodepools:
+#  spot-np-1-cpu:
+#    ami: ${AMI_CPU}
+#    ami_ssh_username: ubuntu
+#    # availability_zone: "us-east-1b"
+#    nvidia_gpu_enabled: false
+#    root_volume_type: gp3
+#    root_volume_size: 50
+#    spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
+#    cpu_node:
+#      vcpu:
+#        min: 2
+#        max: 2
+#      memory_per_vcpu:
+#        min: 2
+#        max: 2
+#    nodes:
+#      node-1: { }
+#      node-2: { }
+#      node-3: { }
+
+enable_nvidia_gpu_support: true
+kloudlite_params:
+  release: v1.0.5-nightly
+  install_crds: true
+  install_csi_driver: true
+  install_operators: true
+
+
+save_ssh_key_to_path: .secrets/${TRACKER_ID}.pem
+save_kubeconfig_to_path: .secrets/${TRACKER_ID}.kubeconfig
+#worker_save_ssh_key_to_path: .secrets/${TRACKER_ID}-worker.pem
+
+extra_server_args: []
+extra_agent_args: []

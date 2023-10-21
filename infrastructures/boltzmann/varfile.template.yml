@@ -1,84 +1,93 @@
+tracker_id: "boltzmann-cluster"
+
+aws_region: us-east-1
 aws_access_key: ${AWS_ACCESS_KEY_ID}
 aws_secret_key: ${AWS_SECRET_ACCESS_KEY}
-aws_region: us-east-1
-aws_ami: ami-0f5994b4c9f02fea1
-aws_nvidia_gpu_ami: "ami-0c8ba594de9df35ef"
 
-# aws_iam_instance_profile_role: EC2StorageAccess
+k3s_masters:
+  ami: ami-0f5994b4c9f02fea1
+  ami_ssh_username: ubuntu
+  instance_type: "c6a.large"
+  nvidia_gpu_enabled: false
+  root_volume_type: gp3
+  root_volume_size: 50
+  iam_instance_profile: ""
 
-cloudflare_api_token: ${CLOUDFLARE_API_TOKEN}
-cloudflare_domain: ${CLOUDFLARE_DOMAIN}
-cloudflare_zone_id: ${CLOUDFLARE_ZONE_ID}
+  public_dns_host: test-boltzmann.kloudlite.io
+  cluster_internal_dns_host: test-cluster.boltzmann.kloudlite.local
 
-ec2_nodes_config:
-  master-1:
-    az: us-east-1a
-    role: primary-master
-    instance_type: c6a.large
+  cloudflare:
+    enabled: true
+    api_token: ${CLOUDFLARE_API_TOKEN}
+    zone_id: ${CLOUDFLARE_ZONE_ID}
+    domain: test-boltzmann.kloudlite.io
+
+  taint_master_nodes: true
+
+  backup_to_s3:
+    enabled: false
+
+  nodes:
+    master-1:
+      role: primary-master
+      availability_zone: us-east-1a
+
+ec2_nodepools: { }
+  # np-1:
+  #   ami: ami-0f5994b4c9f02fea1
+  #   ami_ssh_username: ubuntu
+  #   availability_zone: "us-east-1a"
+  #   instance_type: "c6a.large"
+  #   nvidia_gpu_enabled: false
+  #   root_volume_type: gp3
+  #   root_volume_size: 50
+  #   iam_instance_profile: ""
+  #   nodes:
+  #     node-1: { }
+#     node-2: { }
+
+spot_nodepools:
+  spot-np-1-cpu:
+    ami: ami-0f5994b4c9f02fea1
+    ami_ssh_username: ubuntu
+    # availability_zone: "us-east-1b"
+    nvidia_gpu_enabled: false
+    root_volume_type: gp3
     root_volume_size: 50
+    spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
+    cpu_node:
+      vcpu:
+        min: 4
+        max: 6
+      memory_per_vcpu:
+        min: 4
+        max: 4
+    nodes:
+      node-1: { }
+      node-2: { }
 
-#  master-2:
-#    az: ap-south-1b
-#    role: secondary-master
-#    instance_type: c6a.large
-#    root_volume_size: 50
-#
-#  master-3:
-#    az: ap-south-1c
-#    role: secondary-master
-#    instance_type: c6a.large
-#    root_volume_size: 50
-#
-#  agent-1:
-#   az: ap-south-1a
-#   role: agent
-#   instance_type: c6a.large
-#   root_volume_size: 50
-
-spot_settings:
-  enabled: true
-  spot_fleet_tagging_role_name: aws-ec2-spot-fleet-tagging-role
-
-spot_nodes_config:
-  spot-1-gpu:
-    root_volume_size: 200
-    allow_public_ip: true
-    nvidia_gpu:
-      enabled: true
-      instance_types:
-        - g5.xlarge
-  spot-2-cpu:
-    vcpu:
-      min: 4
-      max: 6
-    memory_per_vcpu:
-      min: 4
-      max: 4
+  spot-np-2-gpu:
+    ami: ami-0c8ba594de9df35ef
+    ami_ssh_username: ubuntu
+    # availability_zone: "us-east-1b"
+    nvidia_gpu_enabled: true
+    root_volume_type: gp3
     root_volume_size: 100
-    allow_public_ip: true
-    nvidia_gpu:
-      enabled: false
-      instance_types: [ ]
-  spot-3-cpu:
-    vcpu:
-      min: 4
-      max: 6
-    memory_per_vcpu:
-      min: 4
-      max: 4
-    root_volume_size: 100
-    allow_public_ip: true
-    nvidia_gpu:
-      enabled: false
-      instance_types: [ ]
-
-disable_ssh: false
-
-kloudlite_release: v1.0.5-nightly
-
-taint_master_nodes: true
-
-kloudlite_agent_vars:
-  install: false
+    spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
+    gpu_node:
+      instance_types: [ g4dn.xlarge ]
+    nodes:
+      node-1: { }
+      node-2: { }
+      node-3: { }
 
 enable_nvidia_gpu_support: true
+kloudlite_params:
+  release: v1.0.5-nightly
+  install_crds: true
+  install_csi_driver: true
+  install_operators: true
+
+save_ssh_key_to_path: .secrets/boltzmann-cluster.pem
+save_kubeconfig_to_path: .secrets/boltzmann-cluster.kubeconfig
+worker_save_ssh_key_to_path: .secrets/boltzmann-cluster-worker.pem

@@ -27,6 +27,7 @@ resource "null_resource" "save_ssh_key" {
   count = length(var.save_ssh_key_to_path) > 0? 1 : 0
 
   provisioner "local-exec" {
+    quiet   = true
     command = "echo '${module.ssh-rsa-key.private_key}' > ${var.save_ssh_key_to_path} && chmod 600 ${var.save_ssh_key_to_path}"
   }
 }
@@ -88,84 +89,8 @@ locals {
   }
 }
 
-module "k3s-primary-master" {
-  source     = "../../modules/k3s/k3s-primary-master"
-  depends_on = [module.k3s-masters-nodepool]
-
-  node_name  = local.primary_master_node_name
-  #  public_dns_hostname = var.k3s_server_dns_hostname
-  public_ip  = module.k3s-masters-nodepool.public_ips[local.primary_master_node_name]
-  ssh_params = {
-    user        = var.k3s_masters.ami_ssh_username
-    private_key = module.ssh-rsa-key.private_key
-  }
-
-  node_labels = merge(local.common_node_labels, {
-    (module.constants.node_labels.provider_az) : var.k3s_masters.nodes[local.primary_master_node_name].availability_zone,
-    (module.constants.node_labels.node_has_role) : var.k3s_masters.nodes[local.primary_master_node_name].role,
-  })
-
-  node_taints = var.k3s_masters.taint_master_nodes ? module.constants.master_node_taints : {}
-
-  k3s_master_nodes_public_ips = [module.k3s-masters-nodepool.public_ips[local.primary_master_node_name]]
-  backup_to_s3                = {
-    enabled = var.k3s_masters.backup_to_s3.enabled
-
-    aws_access_key = var.aws_access_key
-    aws_secret_key = var.aws_secret_key
-
-    bucket_name   = var.k3s_masters.backup_to_s3.bucket_name
-    bucket_region = var.k3s_masters.backup_to_s3.bucket_region
-    bucket_folder = var.k3s_masters.backup_to_s3.bucket_folder
-
-    cron_schedule = local.backup_crontab_schedule[local.primary_master_node_name]
-  }
-
-  restore_from_latest_s3_snapshot = var.k3s_masters.restore_from_latest_snapshot
-
-  public_dns_host           = var.k3s_masters.public_dns_host
-  cluster_internal_dns_host = var.k3s_masters.cluster_internal_dns_host
-}
-
-resource "null_resource" "save_kubeconfig" {
-  count = length(var.save_kubeconfig_to_path) > 0 ? 1 : 0
-
-  depends_on = [module.k3s-primary-master]
-
-  provisioner "local-exec" {
-    command = "echo '${base64decode(module.k3s-primary-master.kubeconfig_with_public_host)}' > ${var.save_kubeconfig_to_path} && chmod 600 ${var.save_kubeconfig_to_path}"
-  }
-}
-
-module "k3s-secondary-master" {
-  source   = "../../modules/k3s/k3s-secondary-master"
-  for_each = {
-    for node_name, node_cfg in var.k3s_masters.nodes : node_name => node_cfg
-    if node_cfg.role == "secondary-master"
-  }
-  k3s_token                = module.k3s-primary-master.k3s_token
-  primary_master_public_ip = module.k3s-primary-master.public_ip
-
-  public_dns_hostname       = var.k3s_masters.public_dns_host
-  cluster_internal_dns_host = var.k3s_masters.cluster_internal_dns_host
-
-  depends_on = [module.k3s-primary-master]
-
-  node_name   = each.key
-  node_taints = var.k3s_masters.taint_master_nodes ? module.constants.master_node_taints : {}
-  ssh_params  = {
-    public_ip   = module.k3s-masters-nodepool.public_ips[each.key]
-    user        = var.k3s_masters.ami_ssh_username
-    private_key = module.ssh-rsa-key.private_key
-  }
-  node_labels = merge(
-    local.common_node_labels,
-    {
-      (module.constants.node_labels.provider_az) : var.k3s_masters.nodes[local.primary_master_node_name].availability_zone,
-      (module.constants.node_labels.node_has_role) : var.k3s_masters.nodes[local.primary_master_node_name].role,
-    }
-  )
-
+module "k3s-masters" {
+  source       = "../../modules/k3s/k3s-master"
   backup_to_s3 = {
     enabled = var.k3s_masters.backup_to_s3.enabled
 
@@ -175,11 +100,37 @@ module "k3s-secondary-master" {
     bucket_name   = var.k3s_masters.backup_to_s3.bucket_name
     bucket_region = var.k3s_masters.backup_to_s3.bucket_region
     bucket_folder = var.k3s_masters.backup_to_s3.bucket_folder
-
-    cron_schedule = local.backup_crontab_schedule[local.primary_master_node_name]
   }
-
+  cluster_internal_dns_host       = var.k3s_masters.cluster_internal_dns_host
   restore_from_latest_s3_snapshot = var.k3s_masters.restore_from_latest_snapshot
+  master_nodes                    = {
+    for k, v in var.k3s_masters.nodes : k => {
+      role : v.role,
+      public_ip : module.k3s-masters-nodepool.public_ips[k]
+      node_labels : merge(local.common_node_labels, {
+        (module.constants.node_labels.provider_az) : v.availability_zone,
+        (module.constants.node_labels.node_has_role) : v.role,
+      })
+    }
+  }
+  public_dns_host = var.k3s_masters.public_dns_host
+  ssh_params      = {
+    user        = var.k3s_masters.ami_ssh_username
+    private_key = module.ssh-rsa-key.private_key
+  }
+  node_taints       = var.k3s_masters.taint_master_nodes ? module.constants.master_node_taints : []
+  extra_server_args = var.extra_server_args
+}
+
+resource "null_resource" "save_kubeconfig" {
+  count = length(var.save_kubeconfig_to_path) > 0 ? 1 : 0
+
+  depends_on = [module.k3s-masters.kubeconfig_with_public_host]
+
+  provisioner "local-exec" {
+    quiet   = true
+    command = "echo '${base64decode(module.k3s-masters.kubeconfig_with_public_host)}' > ${var.save_kubeconfig_to_path} && chmod 600 ${var.save_kubeconfig_to_path}"
+  }
 }
 
 module "cloudflare-dns" {
@@ -200,9 +151,11 @@ module "kloudlite-crds" {
   count             = var.kloudlite_params.install_crds ? 1 : 0
   source            = "../../modules/kloudlite/crds"
   kloudlite_release = var.kloudlite_params.release
-  depends_on        = [module.k3s-primary-master]
+  #  depends_on        = [module.k3s-primary-master]
+  depends_on        = [module.k3s-masters.kubeconfig_with_public_host]
   ssh_params        = {
-    public_ip   = module.k3s-primary-master.public_ip
+    #    public_ip   = module.k3s-primary-master.public_ip
+    public_ip   = module.k3s-masters.k3s_primary_public_ip
     username    = var.k3s_masters.ami_ssh_username
     private_key = module.ssh-rsa-key.private_key
   }
@@ -222,11 +175,12 @@ module "helm-aws-ebs-csi" {
       fs_type     = "ext4"
     },
   }
-  node_selector = {
-    (module.constants.node_labels.node_has_role) : "agent"
-  }
-  ssh_params = {
-    public_ip   = module.k3s-primary-master.public_ip
+  controller_node_selector = module.constants.master_node_selector
+  controller_tolerations   = module.constants.master_node_tolerations
+  daemonset_node_selector  = module.constants.agent_node_selector
+  ssh_params               = {
+    #    public_ip   = module.k3s-primary-master.public_ip
+    public_ip   = module.k3s-masters.k3s_primary_public_ip
     username    = var.k3s_masters.ami_ssh_username
     private_key = module.ssh-rsa-key.private_key
   }
@@ -237,13 +191,15 @@ module "nvidia-container-runtime" {
   source     = "../../modules/nvidia-container-runtime"
   depends_on = [module.kloudlite-crds]
   ssh_params = {
-    public_ip   = module.k3s-primary-master.public_ip
+    #    public_ip   = module.k3s-primary-master.public_ip
+    public_ip   = module.k3s-masters.k3s_primary_public_ip
     user        = var.k3s_masters.ami_ssh_username
     private_key = module.ssh-rsa-key.private_key
   }
-  gpu_nodes_selector = {
+  gpu_node_selector = {
     (module.constants.node_labels.node_has_gpu) : "true"
   }
+  gpu_node_tolerations = module.constants.gpu_node_tolerations
 }
 
 module "kloudlite-operators" {
@@ -253,10 +209,22 @@ module "kloudlite-operators" {
   kloudlite_release = var.kloudlite_params.release
   node_selector     = {}
   ssh_params        = {
-    public_ip   = module.k3s-primary-master.public_ip
+    public_ip   = module.k3s-masters.k3s_primary_public_ip
     username    = var.k3s_masters.ami_ssh_username
     private_key = module.ssh-rsa-key.private_key
   }
+}
+
+module "aws-k3s-spot-termination-handler" {
+  source              = "../../modules/kloudlite/spot-termination-handler"
+  depends_on          = [module.k3s-masters.kubeconfig_with_public_host]
+  spot_nodes_selector = module.constants.spot_node_selector
+  ssh_params          = {
+    public_ip   = module.k3s-masters.k3s_primary_public_ip
+    username    = var.k3s_masters.ami_ssh_username
+    private_key = module.ssh-rsa-key.private_key
+  }
+  kloudlite_release = var.kloudlite_params.release
 }
 
 module "kloudlite-agent" {
@@ -269,7 +237,7 @@ module "kloudlite-agent" {
   kloudlite_message_office_grpc_addr = var.kloudlite_params.agent_vars.message_office_grpc_addr
   kloudlite_release                  = var.kloudlite_params.release
   ssh_params                         = {
-    public_ip   = module.k3s-primary-master.public_ip
+    public_ip   = module.k3s-masters.k3s_primary_public_ip
     username    = var.k3s_masters.ami_ssh_username
     private_key = module.ssh-rsa-key.private_key
   }

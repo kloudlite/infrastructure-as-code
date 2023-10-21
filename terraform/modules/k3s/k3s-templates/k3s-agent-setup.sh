@@ -8,6 +8,10 @@ agent:
   token: ${tf_k3s_token}
   labels: ${tf_node_labels}
   nodeName: ${tf_node_name}
+  taints: ${jsonencode([
+    for taint in  tf_node_taints: "${taint.key}=${taint.value}:${taint.effect}"
+  ])}
+  extraAgentArgs: ${jsonencode(tf_extra_agent_args)}
 EOF2
 
 sudo ln -sf ~/runner-config.yml /runner-config.yml

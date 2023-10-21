@@ -28,13 +28,18 @@ variable "ec2_nodepools" {
   type = map(object({
     ami                  = string
     ami_ssh_username     = string
-    availability_zone    = string
+    availability_zone    = optional(string)
     instance_type        = string
     nvidia_gpu_enabled   = optional(bool)
     root_volume_size     = string
     root_volume_type     = string
     iam_instance_profile = optional(string)
-    nodes                = map(object({
+    node_taints          = optional(list(object({
+      key    = string
+      value  = optional(string)
+      effect = string
+    })))
+    nodes = map(object({
       last_recreated_at = optional(number)
     }))
   }))
@@ -44,7 +49,7 @@ variable "spot_nodepools" {
   type = map(object({
     ami                          = string
     ami_ssh_username             = string
-    availability_zone            = string
+    availability_zone            = optional(string)
     root_volume_size             = string
     root_volume_type             = string
     iam_instance_profile         = optional(string)
@@ -65,6 +70,12 @@ variable "spot_nodepools" {
       instance_types = list(string)
     }))
 
+    node_taints = optional(list(object({
+      key    = string
+      value  = optional(string)
+      effect = string
+    })))
+
     nodes = map(object({
       last_recreated_at = optional(number)
     }))
@@ -79,14 +90,14 @@ variable "spot_nodepools" {
   }
 }
 
-variable "save_ssh_key_to_path" {
-  description = "save ssh key to this path"
-  type        = string
-  default     = ""
+variable "extra_agent_args" {
+  description = "extra agent args to pass to k3s agent"
+  type        = list(string)
+  default     = []
 }
 
-variable "save_kubeconfig_to_path" {
-  description = "save kubeconfig to this path"
+variable "save_ssh_key_to_path" {
+  description = "save ssh key to this path"
   type        = string
   default     = ""
 }

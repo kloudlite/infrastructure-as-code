@@ -1,5 +1,5 @@
---- ../../terraform/bundles/kl-worker-nodes-on-aws/variables.tf	2023-10-15 11:19:46.342604997 +0530
-+++ ./variables-kl-worker-nodes-on-aws.tf	2023-10-15 11:37:21.903597162 +0530
+--- ../../terraform/bundles/kl-worker-nodes-on-aws/variables.tf	2023-10-16 18:38:33.937961648 +0530
++++ ./variables-kl-worker-nodes-on-aws.tf	2023-10-16 18:49:35.919956735 +0530
 @@ -1,22 +1,8 @@
 -variable "aws_access_key" { type = string }
 -variable "aws_secret_key" { type = string }
@@ -28,19 +28,12 @@
  
  variable "ec2_nodepools" {
    type = map(object({
-@@ -72,15 +58,3 @@
-     ])
+@@ -84,7 +70,7 @@
    }
  }
--
+ 
 -variable "save_ssh_key_to_path" {
--  description = "save ssh key to this path"
--  type        = string
--  default     = ""
--}
--
--variable "save_kubeconfig_to_path" {
--  description = "save kubeconfig to this path"
--  type        = string
--  default     = ""
--}
++variable "worker_save_ssh_key_to_path" {
+   description = "save ssh key to this path"
+   type        = string
+   default     = ""

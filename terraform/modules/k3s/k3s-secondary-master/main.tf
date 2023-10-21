@@ -1,7 +1,7 @@
 locals {
   node_taints = flatten([
-    for k, taint in var.node_taints : [
-      "--node-taint", "${k}=${taint.value}:${taint.effect}",
+    for taint in var.node_taints : [
+      "${taint.key}=${taint.value}:${taint.effect}",
     ]
   ])
 }
@@ -31,6 +31,7 @@ secondaryMaster:
   token: ${var.k3s_token}
   nodeName: ${var.node_name}
   labels: ${jsonencode(var.node_labels)}
+  taints: ${jsonencode(local.node_taints)}
   SANs: ${jsonencode([var.public_dns_hostname, var.ssh_params.public_ip])}
   extraServerArgs: ${jsonencode(concat([
     "--disable-helm-controller",
@@ -41,7 +42,6 @@ secondaryMaster:
     "--flannel-external-ip",
     "--cluster-domain", var.cluster_internal_dns_host,
   ],
-  length(local.node_taints) >  0 ? local.node_taints: [],
   var.backup_to_s3.enabled ? [
       "--etcd-s3",
       "--etcd-s3-endpoint", "s3.amazonaws.com",

@@ -19,7 +19,7 @@ tasks:
         If you want to create new variables, please create them in other files
         */
     env:
-      bundleNames: "kl-master-nodes-on-aws kl-worker-nodes-on-aws"
+      bundleNames: "kl-master-nodes-on-aws"
     cmds:
       - |+
         for bundleName in $bundleNames; do

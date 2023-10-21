@@ -274,7 +274,7 @@ module "nvidia-container-runtime" {
     private_key = module.ec2-nodes.ssh_private_key
     user        = var.aws_ami_ssh_username
   }
-  gpu_nodes_selector = local.gpu_node_labels
+  gpu_node_selector = local.gpu_node_labels
 }
 
 module "helm-aws-ebs-csi" {
