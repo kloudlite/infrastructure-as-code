@@ -2,7 +2,7 @@ variable "ssh_params" {
   type = object({
     public_ip   = string
     private_key = string
-    user        = string
+    username    = string
   })
 }
 

@@ -8,7 +8,7 @@ locals {
 
 resource "ssh_resource" "setup_nvidia_gpu_on_node" {
   host        = var.ssh_params.public_ip
-  user        = var.ssh_params.user
+  user        = var.ssh_params.username
   private_key = var.ssh_params.private_key
 
   timeout     = "1m"

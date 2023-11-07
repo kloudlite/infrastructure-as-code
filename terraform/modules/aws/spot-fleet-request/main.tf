@@ -85,7 +85,7 @@ resource "aws_spot_fleet_request" "cpu_spot_fleet" {
   on_demand_allocation_strategy = "lowestPrice"
 
   lifecycle {
-    ignore_changes       = [instance_pools_to_use_count, iam_fleet_role]
+    ignore_changes       = [instance_pools_to_use_count]
     replace_triggered_by = [null_resource.lifecycle_resource]
   }
 
@@ -119,8 +119,10 @@ resource "aws_spot_fleet_request" "cpu_spot_fleet" {
   }
 
   tags = {
-    Name             = "${var.tracker_id}-${var.node_name}"
-    AvailabilityZone = var.availability_zone
+    Name               = "${var.tracker_id}-${var.node_name}"
+    AvailabilityZone   = var.availability_zone
+    IamInstanceProfile = var.iam_instance_profile
+    IamFleetRole       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.spot_fleet_tagging_role_name}"
   }
 
   fleet_type                      = "maintain"
@@ -165,8 +167,10 @@ resource "aws_spot_fleet_request" "gpu_spot_fleet" {
   }
 
   tags = {
-    Name             = "${var.tracker_id}-${var.node_name}"
-    AvailabilityZone = var.availability_zone
+    Name               = "${var.tracker_id}-${var.node_name}"
+    AvailabilityZone   = var.availability_zone
+    IamInstanceProfile = var.iam_instance_profile
+    IamFleetRole       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.spot_fleet_tagging_role_name}"
   }
 
   fleet_type                      = "maintain"
