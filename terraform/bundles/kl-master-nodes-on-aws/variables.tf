@@ -1,6 +1,3 @@
-variable "aws_access_key" { type = string }
-variable "aws_secret_key" { type = string }
-
 variable "aws_region" {
   description = "aws region"
   type        = string
@@ -14,8 +11,8 @@ variable "tracker_id" {
 variable "k3s_masters" {
   description = "k3s masters configuration"
   type        = object({
-    ami                  = string
-    ami_ssh_username     = string
+    image_id             = string
+    image_ssh_username   = string
     instance_type        = string
     nvidia_gpu_enabled   = optional(bool)
     root_volume_size     = string
@@ -28,6 +25,9 @@ variable "k3s_masters" {
 
     backup_to_s3 = object({
       enabled = bool
+
+      aws_access_key = optional(string)
+      aws_secret_key = optional(string)
 
       bucket_name   = optional(string)
       bucket_region = optional(string)
@@ -51,8 +51,10 @@ variable "k3s_masters" {
   })
 
   validation {
-    error_message = "when backup_to_s3 is enabled, all the following variables must be set: bucket_name, bucket_region, bucket_folder"
+    error_message = "when backup_to_s3 is enabled, all the following variables must be set: aws_access_key, aws_secret_key, bucket_name, bucket_region, bucket_folder"
     condition     = var.k3s_masters.backup_to_s3.enabled == false || alltrue([
+      var.k3s_masters.backup_to_s3.aws_access_key != "",
+      var.k3s_masters.backup_to_s3.aws_secret_key != "",
       var.k3s_masters.backup_to_s3.bucket_name != "",
       var.k3s_masters.backup_to_s3.bucket_region != "",
       var.k3s_masters.backup_to_s3.bucket_folder != "",

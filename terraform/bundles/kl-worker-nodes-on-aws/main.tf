@@ -90,7 +90,7 @@ module "aws-ec2-nodepool" {
   for_each   = {for np_name, np_config in var.ec2_nodepools : np_name => np_config}
 
   tracker_id           = "${var.tracker_id}-${each.key}"
-  ami                  = each.value.ami
+  ami                  = each.value.image_id
   availability_zone    = each.value.availability_zone
   iam_instance_profile = each.value.iam_instance_profile
   instance_type        = each.value.instance_type
@@ -134,11 +134,12 @@ module "aws-spot-nodepool" {
   depends_on                   = [null_resource.variable_validations]
   for_each                     = {for np_name, np_config in var.spot_nodepools : np_name => np_config}
   tracker_id                   = "${var.tracker_id}-${each.key}"
-  ami                          = each.value.ami
+  ami                          = each.value.image_id
   availability_zone            = each.value.availability_zone
   root_volume_size             = each.value.root_volume_size
   root_volume_type             = each.value.root_volume_type
   security_groups              = module.aws-security-groups.sg_for_k3s_agents_ids
+  iam_instance_profile         = each.value.iam_instance_profile
   spot_fleet_tagging_role_name = each.value.spot_fleet_tagging_role_name
   ssh_key_name                 = aws_key_pair.k3s_worker_nodes_ssh_key.key_name
   cpu_node                     = each.value.cpu_node
