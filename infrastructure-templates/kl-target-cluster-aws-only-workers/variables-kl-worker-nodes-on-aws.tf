@@ -4,9 +4,6 @@ If you need to change any variable, please edit the corresponding variables in t
 If you want to create new variables, please create them in other files
 */
 
-variable "aws_access_key" { type = string }
-variable "aws_secret_key" { type = string }
-
 variable "aws_region" { type = string }
 
 variable "tracker_id" {
@@ -26,8 +23,8 @@ variable "k3s_server_public_dns_host" {
 
 variable "ec2_nodepools" {
   type = map(object({
-    ami                  = string
-    ami_ssh_username     = string
+    image_id             = string
+    image_ssh_username   = string
     availability_zone    = optional(string)
     instance_type        = string
     nvidia_gpu_enabled   = optional(bool)
@@ -47,8 +44,8 @@ variable "ec2_nodepools" {
 
 variable "spot_nodepools" {
   type = map(object({
-    ami                          = string
-    ami_ssh_username             = string
+    image_id                     = string
+    image_ssh_username           = string
     availability_zone            = optional(string)
     root_volume_size             = string
     root_volume_type             = string
@@ -93,11 +90,9 @@ variable "spot_nodepools" {
 variable "extra_agent_args" {
   description = "extra agent args to pass to k3s agent"
   type        = list(string)
-  default     = []
 }
 
 variable "save_ssh_key_to_path" {
   description = "save ssh key to this path"
   type        = string
-  default     = ""
 }
