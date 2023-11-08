@@ -4,14 +4,19 @@ aws_region: ap-south-1
 aws_access_key: ${AWS_ACCESS_KEY_ID}
 aws_secret_key: ${AWS_SECRET_ACCESS_KEY}
 
+aws_assume_role:
+  enabled: true
+  role_arn: "arn:aws:iam::855999427630:role/kloudlite-access-role"
+  external_id: "sample"
+
 k3s_masters:
-  ami: ami-06d146e85d1709abb
-  ami_ssh_username: ubuntu
+  image_id: ami-06d146e85d1709abb
+  image_ssh_username: ubuntu
   instance_type: "c6a.large"
   nvidia_gpu_enabled: false
   root_volume_type: gp3
   root_volume_size: 50
-  iam_instance_profile: "EC2StorageAccess"
+  iam_instance_profile: "kloudlite-instance-profile"
 
   public_dns_host: dev3.kloudlite.io
   cluster_internal_dns_host: example-cluster.kloudlite-platform.kloudlite.local
@@ -32,43 +37,43 @@ k3s_masters:
       role: primary-master
       availability_zone: ap-south-1a
       # last_recreated_at: 0
-    master-2:
-      role: secondary-master
-      availability_zone: ap-south-1b
-      # last_recreated_at: 0
+    # master-2:
+    #   role: secondary-master
+    #   availability_zone: ap-south-1b
+    #   # last_recreated_at: 0
 
-ec2_nodepools:
-  np-1:
-    ami: ami-06d146e85d1709abb
-    ami_ssh_username: ubuntu
-    availability_zone: "ap-south-1a"
-    instance_type: "c6a.large"
-    nvidia_gpu_enabled: false
-    root_volume_type: gp3
-    root_volume_size: 50
-    iam_instance_profile: ""
-    nodes:
-      node-1: {}
-      node-2: {}
-
-spot_nodepools:
-  spot-np-1:
-    ami: ami-06d146e85d1709abb
-    ami_ssh_username: ubuntu
-    availability_zone: "ap-south-1b"
-    nvidia_gpu_enabled: false
-    root_volume_type: gp3
-    root_volume_size: 50
-    spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
-    cpu_node:
-      vcpu:
-        min: 1
-        max: 2
-      memory_per_vcpu:
-        min: 2
-        max: 4
-    nodes:
-      node-1: { last_recreated_at: 3 }
+# ec2_nodepools:
+#   np-1:
+#     image_id: ami-06d146e85d1709abb
+#     image_ssh_username: ubuntu
+#     availability_zone: "ap-south-1a"
+#     instance_type: "c6a.large"
+#     nvidia_gpu_enabled: false
+#     root_volume_type: gp3
+#     root_volume_size: 50
+#     iam_instance_profile: "kloudlite-instance-profile"
+#     nodes:
+#       node-1: { }
+#
+# spot_nodepools:
+#   spot-np-1:
+#     image_id: ami-06d146e85d1709abb
+#     image_ssh_username: ubuntu
+#     availability_zone: "ap-south-1b"
+#     nvidia_gpu_enabled: false
+#     root_volume_type: gp3
+#     root_volume_size: 50
+#     iam_instance_profile: "kloudlite-instance-profile"
+#     spot_fleet_tagging_role_name: "kloudlite-access-role"
+#     cpu_node:
+#       vcpu:
+#         min: 1
+#         max: 2
+#       memory_per_vcpu:
+#         min: 2
+#         max: 4
+#     nodes:
+#       node-1: { }
 
 enable_nvidia_gpu_support: false
 kloudlite_params:
@@ -85,7 +90,7 @@ extra_agent_args:
   - "stargz"
 
 
-save_ssh_key_to_path: /tmp/${TRACKER_ID}.pem
-save_kubeconfig_to_path: /tmp/${TRACKER_ID}.kubeconfig
+save_ssh_key_to_path: .secrets/${TRACKER_ID}.pem
+save_kubeconfig_to_path: .secrets/${TRACKER_ID}.kubeconfig
 
-worker_save_ssh_key_to_path: /tmp/${TRACKER_ID}-worker.pem
+save_worker_ssh_key_to_path: .secrets/${TRACKER_ID}-worker.pem

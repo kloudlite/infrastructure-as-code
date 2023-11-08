@@ -6,8 +6,8 @@ If you want to create new variables, please create them in other files
 
 variable "ec2_nodepools" {
   type = map(object({
-    ami                  = string
-    ami_ssh_username     = string
+    image_id             = string
+    image_ssh_username   = string
     availability_zone    = optional(string)
     instance_type        = string
     nvidia_gpu_enabled   = optional(bool)
@@ -27,8 +27,8 @@ variable "ec2_nodepools" {
 
 variable "spot_nodepools" {
   type = map(object({
-    ami                          = string
-    ami_ssh_username             = string
+    image_id                     = string
+    image_ssh_username           = string
     availability_zone            = optional(string)
     root_volume_size             = string
     root_volume_type             = string
@@ -70,8 +70,12 @@ variable "spot_nodepools" {
   }
 }
 
-variable "worker_save_ssh_key_to_path" {
+variable "extra_agent_args" {
+  description = "extra agent args to pass to k3s agent"
+  type        = list(string)
+}
+
+variable "save_worker_ssh_key_to_path" {
   description = "save ssh key to this path"
   type        = string
-  default     = ""
 }

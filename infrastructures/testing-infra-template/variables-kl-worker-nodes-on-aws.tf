@@ -70,6 +70,12 @@ variable "spot_nodepools" {
   }
 }
 
+variable "extra_agent_args" {
+  description = "extra agent args to pass to k3s agent"
+  type        = list(string)
+  default     = []
+}
+
 variable "worker_save_ssh_key_to_path" {
   description = "save ssh key to this path"
   type        = string

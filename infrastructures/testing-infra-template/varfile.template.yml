@@ -32,24 +32,23 @@ k3s_masters:
       role: primary-master
       availability_zone: ap-south-1a
       # last_recreated_at: 0
-    master-2:
-      role: secondary-master
-      availability_zone: ap-south-1b
-      # last_recreated_at: 0
+    # master-2:
+    #   role: secondary-master
+    #   availability_zone: ap-south-1b
+    #   # last_recreated_at: 0
 
-ec2_nodepools:
-  np-1:
-    ami: ami-06d146e85d1709abb
-    ami_ssh_username: ubuntu
-    availability_zone: "ap-south-1a"
-    instance_type: "c6a.large"
-    nvidia_gpu_enabled: false
-    root_volume_type: gp3
-    root_volume_size: 50
-    iam_instance_profile: ""
-    nodes:
-      node-1: {}
-      node-2: {}
+ec2_nodepools: { }
+#  np-1:
+#    ami: ami-06d146e85d1709abb
+#    ami_ssh_username: ubuntu
+#    availability_zone: "ap-south-1a"
+#    instance_type: "c6a.large"
+#    nvidia_gpu_enabled: false
+#    root_volume_type: gp3
+#    root_volume_size: 50
+#    iam_instance_profile: "EC2StorageAccess"
+#    nodes:
+#      node-1: { }
 
 spot_nodepools:
   spot-np-1:
@@ -59,6 +58,7 @@ spot_nodepools:
     nvidia_gpu_enabled: false
     root_volume_type: gp3
     root_volume_size: 50
+    iam_instance_profile: "EC2StorageAccess"
     spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
     cpu_node:
       vcpu:
@@ -68,7 +68,7 @@ spot_nodepools:
         min: 2
         max: 4
     nodes:
-      node-1: { last_recreated_at: 3 }
+      node-1: { }
 
 enable_nvidia_gpu_support: false
 kloudlite_params:
@@ -77,7 +77,7 @@ kloudlite_params:
   install_csi_driver: true
   install_operators: true
 
-save_ssh_key_to_path: /tmp/example-cluster.pem
-save_kubeconfig_to_path: /tmp/example-cluster.kubeconfig
+save_ssh_key_to_path: .secrets/testing-infra-template.pem
+save_kubeconfig_to_path: .secrets/testing-infra-template.kubeconfig
 
-worker_save_ssh_key_to_path: /tmp/example-cluster-worker.pem
+worker_save_ssh_key_to_path: .secrets/testing-infra-template-worker.pem
