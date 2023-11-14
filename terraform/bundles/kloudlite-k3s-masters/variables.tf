@@ -95,8 +95,9 @@ variable "kloudlite_params" {
     install_csi_driver = optional(bool, false)
     install_operators  = optional(bool, false)
 
-    install_agent = optional(bool, false)
-    agent_vars    = optional(object({
+    install_agent       = optional(bool, false)
+    install_autoscalers = optional(bool, true)
+    agent_vars          = optional(object({
       account_name             = string
       cluster_name             = string
       cluster_token            = string

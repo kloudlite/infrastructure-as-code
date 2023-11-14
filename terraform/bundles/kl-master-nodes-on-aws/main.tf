@@ -88,6 +88,7 @@ module "kloudlite-k3s-masters" {
         (module.constants.node_labels.provider_region) : var.aws_region,
         (module.constants.node_labels.provider_az) : cfg.availability_zone,
         (module.constants.node_labels.node_has_role) : cfg.role,
+        (module.constants.node_labels.provider_aws_instance_profile_name) : var.k3s_masters.iam_instance_profile,
       }
       availability_zone = cfg.availability_zone,
       last_recreated_at = cfg.last_recreated_at,
@@ -136,4 +137,6 @@ module "aws-k3s-spot-termination-handler" {
     private_key = module.ssh-rsa-key.private_key
   }
   kloudlite_release = var.kloudlite_params.release
+  release_name      = "kl-aws-spot-termination-handler"
+  release_namespace = module.kloudlite-k3s-masters.kloudlite_namespace
 }

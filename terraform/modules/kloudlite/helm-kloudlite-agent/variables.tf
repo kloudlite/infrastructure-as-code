@@ -7,6 +7,16 @@ variable "ssh_params" {
   })
 }
 
+variable "release_name" {
+  description = "Name of the helm release"
+  type        = string
+}
+
+variable "release_namespace" {
+  description = "Namespace to install the helm release"
+  type        = string
+}
+
 variable "kloudlite_release" {
   description = "Kloudlite release to deploy"
   type        = string

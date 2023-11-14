@@ -22,6 +22,8 @@ resource "ssh_resource" "apply_kloudlite_crds" {
 
   file {
     content = templatefile("${path.module}/templates/helm-charts-agent.yml.tpl", {
+      release_name                       = var.release_name
+      release_namespace                  = var.release_namespace
       kloudlite_release                  = var.kloudlite_release
       kloudlite_account_name             = var.kloudlite_account_name
       kloudlite_cluster_name             = var.kloudlite_cluster_name

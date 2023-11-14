@@ -1,13 +1,8 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kloudlite-operators
----
 apiVersion: crds.kloudlite.io/v1
 kind: HelmChart
 metadata:
-  name: operators
-  namespace: kloudlite-operators
+  name: ${release_name}
+  namespace: ${release_namespace}
 spec:
   chartRepo:
     name: kloudlite

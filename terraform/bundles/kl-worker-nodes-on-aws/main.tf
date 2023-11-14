@@ -117,6 +117,7 @@ module "aws-ec2-nodepool" {
           {
             (module.constants.node_labels.node_has_role) = "agent"
             (module.constants.node_labels.nodepool_name) : each.key,
+            (module.constants.node_labels.provider_aws_instance_profile_name) : each.value.iam_instance_profile,
           },
           each.value.nvidia_gpu_enabled == true ? { (module.constants.node_labels.node_has_gpu) : "true" } : {}
         ))
@@ -163,6 +164,7 @@ module "aws-spot-nodepool" {
             (module.constants.node_labels.node_has_role) = "agent"
             (module.constants.node_labels.node_is_spot)  = "true"
             (module.constants.node_labels.nodepool_name) : each.key,
+            (module.constants.node_labels.provider_aws_instance_profile_name) : each.value.iam_instance_profile,
           },
           each.value.gpu_node != null ? { (module.constants.node_labels.node_has_gpu) : "true" } : {}
         ))

@@ -7,6 +7,15 @@ variable "ssh_params" {
   })
 }
 
+variable "release_name" {
+  description = "helm release name"
+  type        = string
+}
+variable "release_namespace" {
+  description = "helm release namespace"
+  type        = string
+}
+
 variable "node_selector" {
   description = "node selector for ebs controller and daemon sets"
   type        = map(string)

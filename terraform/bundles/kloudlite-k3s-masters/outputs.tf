@@ -29,3 +29,7 @@ output "kubeconfig" {
   sensitive = true
   value     = module.k3s-masters.kubeconfig_with_public_host
 }
+
+output "kloudlite_namespace" {
+  value = local.kloudlite_namespace
+}

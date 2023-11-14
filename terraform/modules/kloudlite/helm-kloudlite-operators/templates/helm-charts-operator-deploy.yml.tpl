@@ -1,20 +1,43 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${svc_account_name}
+  namespace: ${svc_account_namespace}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ${svc_account_name}-rb
+subjects:
+  - kind: ServiceAccount
+    name: ${svc_account_name}
+    namespace: ${svc_account_namespace}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: "ClusterRole"
+  name: cluster-admin
+
+---
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ${name}
-  namespace: ${namespace}
+  name: ${deployment_name}
+  namespace: ${deployment_namespace}
   annotations:
     kloudlite.io/description: |+
       Helm Charts Operator, by kloudlite labs, is a Kubernetes operator for managing Helm charts.
 spec:
   selector:
     matchLabels:
-      app: ${name}
+      app: ${deployment_name}
   replicas: 1
   template:
     metadata:
       labels:
-        app: ${name}
+        app: ${deployment_name}
       annotations:
         kubectl.kubernetes.io/default-container: manager
     spec:

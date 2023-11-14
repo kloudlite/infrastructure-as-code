@@ -13,30 +13,24 @@ resource "ssh_resource" "kloudlite_operators" {
   ]
 
   file {
-    content = templatefile("${path.module}/templates/helm-charts-operator-rbac.yml.tpl", {
-      svc_account_name      = "helm-charts-svc-account"
-      svc_account_namespace = "kube-system"
-    })
-    destination = "manifests/helm-charts-operator-rbac.yml"
-    permissions = "0666"
-  }
-
-  file {
     content = templatefile("${path.module}/templates/helm-charts-operator-deploy.yml.tpl", {
-      name      = "helm-charts-operator"
-      namespace = "kube-system"
+      deployment_name      = "helm-charts-operator"
+      deployment_namespace = var.release_namespace
 
       image             = "ghcr.io/kloudlite/operators/helm-charts:${var.kloudlite_release}"
       image_pull_policy = "Always"
 
-      svc_account_name = "helm-charts-svc-account"
+      svc_account_name      = "helm-charts-svc-account"
+      svc_account_namespace = var.release_namespace
     })
     destination = "manifests/helm-charts-operator-deploy.yml"
     permissions = "0666"
   }
 
   file {
-    content = templatefile("${path.module}/templates/helm-resource.yml.tpl", {
+    content = templatefile("${path.module}/templates/helm-release-kloudlite-operators.yml.tpl", {
+      release_name      = var.release_name
+      release_namespace = var.release_namespace
       kloudlite_release = var.kloudlite_release
     })
     destination = "manifests/kloudlite-operators.yml"
@@ -46,7 +40,6 @@ resource "ssh_resource" "kloudlite_operators" {
   commands = [
     <<EOT
 export KUBECTL="sudo k3s kubectl"
-$KUBECTL apply -f manifests/helm-charts-operator-rbac.yml
 $KUBECTL apply -f manifests/helm-charts-operator-deploy.yml
 $KUBECTL apply -f manifests/kloudlite-operators.yml
 EOT
