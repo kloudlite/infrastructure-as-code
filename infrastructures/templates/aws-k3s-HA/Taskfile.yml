@@ -17,7 +17,7 @@ tasks:
     vars:
       PlanOutput: ".secrets/plan.out"
     cmds:
-      - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
+      - cat ./varfile.template.yml.old | envsubst | yq > {{.Varsfile}}
       - terraform plan
         --var-file "{{.Varsfile}}"
         --out "{{.PlanOutput}}"
@@ -38,7 +38,7 @@ tasks:
     vars:
       PlanOutput: ".secrets/plan.destroy.out"
     cmds:
-      - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
+      - cat ./varfile.template.yml.old | envsubst | yq > {{.Varsfile}}
       - terraform plan
         --var-file "{{.Varsfile}}"
         --destroy
