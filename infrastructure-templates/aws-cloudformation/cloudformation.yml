@@ -15,6 +15,10 @@ Parameters:
     Type: String
     Description: Name of the role to be created
     Default: kloudlite-access-role
+  InstanceProfileName:
+    Type: String
+    Description: Name of the instance profile to be created
+    Default: kloudlite-instance-profile
 
 Resources:
   KloudliteAccessRole:
@@ -51,7 +55,7 @@ Resources:
   KloudliteInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
-      InstanceProfileName: !Ref RoleName
+      InstanceProfileName: !Ref InstanceProfileName
       Path: /
       Roles:
         - !Ref KloudliteAccessRole
