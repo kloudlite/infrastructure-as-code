@@ -1,13 +1,13 @@
 variable "aws_access_key" {
   description = "AWS Access Key"
   type        = string
-  optional    = true
+  default     = ""
 }
 
 variable "aws_secret_key" {
   description = "AWS Secret Key"
   type        = string
-  optional    = true
+  default     = ""
 }
 
 variable "aws_assume_role" {
@@ -16,4 +16,5 @@ variable "aws_assume_role" {
     role_arn    = string
     external_id = optional(string, null)
   })
+  default = null
 }

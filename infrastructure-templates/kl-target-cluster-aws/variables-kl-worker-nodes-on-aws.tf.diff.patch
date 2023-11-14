@@ -1,5 +1,5 @@
---- ../../terraform/bundles/kl-worker-nodes-on-aws/variables.tf	2023-11-01 14:25:20.214061595 +0530
-+++ ./variables-kl-worker-nodes-on-aws.tf	2023-11-01 14:37:50.370056027 +0530
+--- ../../terraform/bundles/kl-worker-nodes-on-aws/variables.tf	2023-11-08 12:37:12.000916106 +0530
++++ ./variables-kl-worker-nodes-on-aws.tf	2023-11-09 13:12:24.997345317 +0530
 @@ -1,19 +1,8 @@
 -variable "aws_region" { type = string }
 -

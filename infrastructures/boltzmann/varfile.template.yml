@@ -86,8 +86,8 @@ spot_nodepools:
       node-3: { }
 
   spot-np-3-cpu:
-    ami: ami-0f5994b4c9f02fea1
-    ami_ssh_username: ubuntu
+    image_id: ami-0f5994b4c9f02fea1
+    image_ssh_username: ubuntu
 
     nvidia_gpu_enabled: false
     root_volume_type: gp3
@@ -113,4 +113,7 @@ kloudlite_params:
 
 save_ssh_key_to_path: .secrets/boltzmann-cluster.pem
 save_kubeconfig_to_path: .secrets/boltzmann-cluster.kubeconfig
-worker_save_ssh_key_to_path: .secrets/boltzmann-cluster-worker.pem
+save_worker_ssh_key_to_path: .secrets/boltzmann-cluster-worker.pem
+
+extra_agent_args: []
+extra_server_args: []

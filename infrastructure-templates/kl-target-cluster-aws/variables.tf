@@ -14,5 +14,6 @@ variable "aws_assume_role" {
     role_arn    = string
     external_id = optional(string, null)
   })
+  default = null
 }
 
