@@ -5,6 +5,8 @@ locals {
     provider_az            = "kloudlite.io/provider.az"
     provider_instance_type = "kloudlite.io/provider.instance-type"
 
+    provider_aws_instance_profile_name = "kloudlite.io/provider.aws.instance-profile-name"
+
     nodepool_name = "kloudlite.io/nodepool.name"
     node_has_role = "kloudlite.io/node.has-role"
     node_has_gpu  = "kloudlite.io/node.has-gpu"
