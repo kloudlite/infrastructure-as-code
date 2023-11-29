@@ -18,14 +18,15 @@ k3s_masters:
   root_volume_size: 50
   iam_instance_profile: "kloudlite-instance-profile"
 
-  public_dns_host: dev3.kloudlite.io
+  # public_dns_host: dev3.kloudlite.io
+  public_dns_host: sample-clster-testing3.kloudlite.io
   cluster_internal_dns_host: example-cluster.kloudlite-platform.kloudlite.local
 
   cloudflare:
     enabled: true
     api_token: ${CLOUDFLARE_API_TOKEN}
     zone_id: ${CLOUDFLARE_ZONE_ID}
-    domain: dev3.kloudlite.io
+    domain: sample-clster-testing3.kloudlite.io
 
   taint_master_nodes: true
 
@@ -56,27 +57,28 @@ k3s_masters:
 #       node-1: { }
 
 ec2_nodepools: {}
-spot_nodepools:
-  spot-np-1:
-    image_id: ami-0fdcdf796bf63edfd
-    image_ssh_username: ubuntu
-    availability_zone: "ap-south-1b"
-    nvidia_gpu_enabled: false
-    root_volume_type: gp3
-    root_volume_size: 80
-    # iam_instance_profile: "kloudlite-instance-profile"
-    spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
-    gpu_node:
-      instance_types: ["g5.xlarge"]
-    # cpu_node:
-    #   vcpu:
-    #     min: 1
-    #     max: 2
-    #   memory_per_vcpu:
-    #     min: 2
-    #     max: 4
-    nodes:
-      node-1: { }
+spot_nodepools: {}
+# spot_nodepools:
+#   spot-np-1:
+#     image_id: ami-0fdcdf796bf63edfd
+#     image_ssh_username: ubuntu
+#     availability_zone: "ap-south-1b"
+#     nvidia_gpu_enabled: false
+#     root_volume_type: gp3
+#     root_volume_size: 80
+#     # iam_instance_profile: "kloudlite-instance-profile"
+#     spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
+#     gpu_node:
+#       instance_types: ["g5.xlarge"]
+#     # cpu_node:
+#     #   vcpu:
+#     #     min: 1
+#     #     max: 2
+#     #   memory_per_vcpu:
+#     #     min: 2
+#     #     max: 4
+#     nodes:
+#       node-1: { }
 
 enable_nvidia_gpu_support: false
 kloudlite_params:
@@ -86,7 +88,7 @@ kloudlite_params:
       account_name: "sample"
       cluster_name: "sample"
       cluster_token:  "safsdff"
-      message_office_grpc_addr: "asdasdf"
+      message_office_grpc_addr: "message-office-api.dev.kloudlite.io:443"
   install_crds: true
   install_csi_driver: true
   install_operators: true

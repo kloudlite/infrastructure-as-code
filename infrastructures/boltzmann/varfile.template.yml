@@ -6,8 +6,8 @@ aws_secret_key: ${AWS_SECRET_ACCESS_KEY}
 aws_assume_role: null
 
 k3s_masters:
-  ami: ami-0f5994b4c9f02fea1
-  ami_ssh_username: ubuntu
+  image_id: ami-0f5994b4c9f02fea1
+  image_ssh_username: ubuntu
   instance_type: "c6a.large"
   nvidia_gpu_enabled: false
   root_volume_type: gp3
@@ -50,8 +50,8 @@ ec2_nodepools: { }
 
 spot_nodepools:
   spot-np-1-cpu:
-    ami: ami-0f5994b4c9f02fea1
-    ami_ssh_username: ubuntu
+    image_id: ami-0f5994b4c9f02fea1
+    image_ssh_username: ubuntu
     # availability_zone: "us-east-1b"
     nvidia_gpu_enabled: false
     root_volume_type: gp3
@@ -69,21 +69,21 @@ spot_nodepools:
       node-1: { }
       node-2: { }
 
-  spot-np-2-gpu:
-    ami: ami-0c8ba594de9df35ef
-    ami_ssh_username: ubuntu
-    # availability_zone: "us-east-1b"
-    nvidia_gpu_enabled: true
-    root_volume_type: gp3
-    root_volume_size: 100
-    spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
-    iam_instance_profile: "ec2_s3_full"
-    gpu_node:
-      instance_types: [ g4dn.xlarge ]
-    nodes:
-      node-1: { }
-      node-2: { }
-      node-3: { }
+  # spot-np-2-gpu:
+  #   ami: ami-0c8ba594de9df35ef
+  #   ami_ssh_username: ubuntu
+  #   # availability_zone: "us-east-1b"
+  #   nvidia_gpu_enabled: true
+  #   root_volume_type: gp3
+  #   root_volume_size: 100
+  #   spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
+  #   iam_instance_profile: "ec2_s3_full"
+  #   gpu_node:
+  #     instance_types: [ g4dn.xlarge ]
+  #   nodes:
+  #     node-1: { }
+  #     node-2: { }
+  #     node-3: { }
 
   spot-np-3-cpu:
     image_id: ami-0f5994b4c9f02fea1

@@ -27,7 +27,9 @@ tasks:
       PlanOutput: ".secrets/plan.out"
     cmds:
       - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
-      - terraform plan --var-file "{{.Varsfile}}" --out "{{.PlanOutput}}"
+      - terraform plan --var-file "{{.Varsfile}}" --out "{{.PlanOutput}}" 
+        -target="module.kl-worker-nodes-on-aws.module.aws-spot-nodepool[\"spot-np-2-gpu\"].module.spot-fleet-request[\"node-2\"].aws_launch_template.spot_template"
+        # module.kl-worker-nodes-on-aws.module.aws-spot-nodepool["spot-np-2-gpu"].module.spot-fleet-request["node-1"].aws_launch_template.spot_template
 
   apply:
     dir: ./
@@ -51,5 +53,6 @@ tasks:
       PlanOutput: ".secrets/plan.destroy.out"
     cmds:
       - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
-      - terraform plan --var-file={{.Varsfile}} --destroy --out "{{.PlanOutput}}"
+      - terraform plan --var-file={{.Varsfile}} --destroy --out "{{.PlanOutput}}" 
+        -target="module.kl-worker-nodes-on-aws.module.aws-spot-nodepool[\"spot-np-2-gpu\"].module.spot-fleet-request[\"node-1\"].aws_launch_template.spot_template"
       - terraform apply "{{.PlanOutput}}"
