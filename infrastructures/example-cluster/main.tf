@@ -154,7 +154,7 @@ locals {
 }
 
 module "k3s-primary-master" {
-  source     = "../../terraform/modules/k3s/k3s-primary-master"
+  source     = "../../terraform/modules/k3s/__deprecated__/k3s-primary-master"
   depends_on = [module.k3s-masters-nodepool]
 
   node_name  = local.primary_master_node_name
@@ -203,7 +203,7 @@ resource "null_resource" "save_kubeconfig" {
 }
 
 module "k3s-secondary-master" {
-  source   = "../../terraform/modules/k3s/k3s-secondary-master"
+  source   = "../../terraform/modules/k3s/__deprecated__/k3s-secondary-master"
   for_each = {
     for node_name, node_cfg in var.k3s_masters.nodes : node_name => node_cfg
     if node_cfg.role == "secondary-master"

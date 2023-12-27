@@ -1,14 +1,14 @@
-tracker_id: "example-cluster"
+tracker_id: "${TRACKER_ID}"
 
-aws_region: ap-south-1
-aws_access_key: ${AWS_ACCESS_KEY_ID}
-aws_secret_key: ${AWS_SECRET_ACCESS_KEY}
+aws_region: ${AWS_REGION}
+aws_access_key: ${AWS_ACCESS_KEY}
+aws_secret_key: ${AWS_SECRET_KEY}
 
 # aws_assume_role:
-#   enabled: true
-#   role_arn: "arn:aws:iam::855999427630:role/kloudlite-access-role"
-#   external_id: "sample"
-
+#   enabled: false
+#   role_arn: "${AWS_ASSUME_ROLE_ARN}"
+#   external_id: "${AWS_ASSUME_ROLE_PARAM_EXTERNAL_ID}"
+#
 k3s_masters:
   image_id: ami-06d146e85d1709abb
   image_ssh_username: ubuntu
@@ -16,32 +16,38 @@ k3s_masters:
   nvidia_gpu_enabled: false
   root_volume_type: gp3
   root_volume_size: 50
-  iam_instance_profile: "kloudlite-instance-profile"
+  iam_instance_profile: "kloudlite-platform-instance-profile"
 
   # public_dns_host: dev3.kloudlite.io
-  public_dns_host: sample-clster-testing3.kloudlite.io
-  cluster_internal_dns_host: example-cluster.kloudlite-platform.kloudlite.local
+  public_dns_host: ${PUBLIC_DNS_HOST_MASTERS}
+  cluster_internal_dns_host: cluster.local
 
   cloudflare:
     enabled: true
     api_token: ${CLOUDFLARE_API_TOKEN}
     zone_id: ${CLOUDFLARE_ZONE_ID}
-    domain: sample-clster-testing3.kloudlite.io
+    domain: ${PUBLIC_DNS_HOST_MASTERS}
 
   taint_master_nodes: true
 
   backup_to_s3:
-    enabled: false
+    enabled: true
+    bucket_name: "${K3S_BACKUP_S3_BUCKET_NAME}"
+    bucket_region: "${K3S_BACKUP_S3_BUCKET_REGION}"
+    bucket_folder: "${K3S_BACKUP_S3_BUCKET_FOLDER}"
 
   nodes:
     master-1:
       role: primary-master
       availability_zone: ap-south-1a
-      # last_recreated_at: 0
     # master-2:
     #   role: secondary-master
     #   availability_zone: ap-south-1b
     #   # last_recreated_at: 0
+    # master-3:
+    #   role: secondary-master
+    #   availability_zone: ap-south-1c
+      # last_recreated_at: 0
 
 # ec2_nodepools:
 #   np-1:
@@ -83,12 +89,12 @@ spot_nodepools: {}
 enable_nvidia_gpu_support: false
 kloudlite_params:
   release: v1.0.5-nightly
-  install_agent: true
-  agent_vars:
-      account_name: "sample"
-      cluster_name: "sample"
-      cluster_token:  "safsdff"
-      message_office_grpc_addr: "message-office-api.dev.kloudlite.io:443"
+  install_agent: false
+  # agent_vars:
+  #     account_name: "sample"
+  #     cluster_name: "sample"
+  #     cluster_token:  "safsdff"
+  #     message_office_grpc_addr: "message-office-api.dev.kloudlite.io:443"
   install_crds: true
   install_csi_driver: true
   install_operators: true

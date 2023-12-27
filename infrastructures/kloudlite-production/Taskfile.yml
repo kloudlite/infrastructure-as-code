@@ -6,9 +6,6 @@ dotenv:
 vars:
   Varsfile: ".secrets/varfile.json"
 
-env:
-  TRACKER_ID: "kloudlite-dev-cluster3"
-
 tasks:
   sync-from-template:
     vars:
@@ -21,11 +18,6 @@ tasks:
       - cp {{.InfrastructureTemplate}}/*.tf ./
       - chmod 400 ./*.tf
       - echo "sync complete"
-
-  init:
-    cmds:
-      - terraform init
-    silent: true
 
   init:
     cmds:

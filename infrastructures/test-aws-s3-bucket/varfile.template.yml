@@ -5,5 +5,5 @@ aws_assume_role:
   role_arn: ${AWS_ASSUME_ROLE_ROLE_ARN}
 aws_region: ${AWS_REGION}
 aws_secret_key: ${AWS_SECRET_KEY}
-bucket_name: sample-sadfasdfs
-tracker_id: sample-sadfasdfs
+bucket_name: sample-example
+tracker_id: sample-example
