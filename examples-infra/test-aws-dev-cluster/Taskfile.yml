@@ -6,11 +6,6 @@ dotenv:
 vars:
   Varsfile: ".secrets/varfile.json"
 
-env:
-  AMI_CPU: "ami-06d146e85d1709abb"
-  TRACKER_ID: "kloudlite-dev-cluster2"
-  TF_PLUGIN_CACHE_DIR: "../../.terraform.d/plugin-cache"
-
 tasks:
   sync-from-template:
     vars:
@@ -25,8 +20,9 @@ tasks:
       - echo "sync complete"
 
   init:
+    # env:
+    #   TS_PLUGIN_CACHE_DIR: /var/home/nxtcoder17/workspace/kloudlite/infrastructure-as-code/.terraform.d/plugin-cache
     cmds:
-      - mkdir -p $TF_PLUGIN_CACHE_DIR
       - terraform init
     silent: true
 
@@ -62,4 +58,3 @@ tasks:
       - cat ./varfile.template.yml | envsubst | yq > {{.Varsfile}}
       - terraform plan --var-file={{.Varsfile}} --destroy --out "{{.PlanOutput}}"
       - terraform apply "{{.PlanOutput}}"
-

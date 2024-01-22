@@ -4,11 +4,12 @@ aws_region: ${AWS_REGION}
 aws_access_key: ${AWS_ACCESS_KEY}
 aws_secret_key: ${AWS_SECRET_KEY}
 
-# aws_assume_role:
-#   enabled: false
-#   role_arn: "${AWS_ASSUME_ROLE_ARN}"
-#   external_id: "${AWS_ASSUME_ROLE_PARAM_EXTERNAL_ID}"
+aws_assume_role:
+  enabled: true
+  role_arn: "${AWS_ASSUME_ROLE_ARN}"
+  external_id: "${AWS_ASSUME_ROLE_PARAM_EXTERNAL_ID}"
 #
+
 k3s_masters:
   image_id: ami-06d146e85d1709abb
   image_ssh_username: ubuntu
@@ -16,7 +17,7 @@ k3s_masters:
   nvidia_gpu_enabled: false
   root_volume_type: gp3
   root_volume_size: 50
-  iam_instance_profile: "kloudlite-platform-instance-profile"
+  iam_instance_profile: "${AWS_INSTANCE_PROFILE}"
 
   # public_dns_host: dev3.kloudlite.io
   public_dns_host: ${PUBLIC_DNS_HOST_MASTERS}
@@ -32,9 +33,13 @@ k3s_masters:
 
   backup_to_s3:
     enabled: true
+
+    endpoint: "s3.amazonaws.com"
     bucket_name: "${K3S_BACKUP_S3_BUCKET_NAME}"
     bucket_region: "${K3S_BACKUP_S3_BUCKET_REGION}"
     bucket_folder: "${K3S_BACKUP_S3_BUCKET_FOLDER}"
+
+  restore_from_latest_snapshot: true
 
   nodes:
     master-1:
@@ -62,8 +67,9 @@ k3s_masters:
 #     nodes:
 #       node-1: { }
 
-ec2_nodepools: {}
-spot_nodepools: {}
+# ec2_nodepools: {}
+# spot_nodepools: {}
+
 # spot_nodepools:
 #   spot-np-1:
 #     image_id: ami-0fdcdf796bf63edfd
@@ -90,11 +96,6 @@ enable_nvidia_gpu_support: false
 kloudlite_params:
   release: v1.0.5-nightly
   install_agent: false
-  # agent_vars:
-  #     account_name: "sample"
-  #     cluster_name: "sample"
-  #     cluster_token:  "safsdff"
-  #     message_office_grpc_addr: "message-office-api.dev.kloudlite.io:443"
   install_crds: true
   install_csi_driver: true
   install_operators: true
@@ -102,11 +103,10 @@ kloudlite_params:
 extra_server_args:
   - --snapshotter
   - "stargz"
-extra_agent_args:
-  - --snapshotter
-  - "stargz"
+# extra_agent_args:
+#   - --snapshotter
+#   - "stargz"
 
 save_ssh_key_to_path: .secrets/${TRACKER_ID}.pem
 save_kubeconfig_to_path: .secrets/${TRACKER_ID}.kubeconfig
-
-save_worker_ssh_key_to_path: .secrets/${TRACKER_ID}-worker.pem
+# save_worker_ssh_key_to_path: .secrets/${TRACKER_ID}-worker.pem

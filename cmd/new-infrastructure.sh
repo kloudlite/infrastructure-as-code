@@ -1,24 +1,23 @@
 #! /usr/bin/env bash
 
-dir=$1
+destination_path=$(realpath "$1")
 
-script_dir=$(realpath $(dirname "$0"))
+SCRIPT_DIR=$(realpath $(dirname $0))
 
-dir_path=$script_dir/../infrastructures/$dir
+templates_dir="$SCRIPT_DIR/../infrastructure-templates"
 
-[ -d "$dir_path" ] && echo "Directory $dir_path already exists" && exit 1
+[ -d "$destination_path" ] && echo "Directory $destination_path already exists" && exit 1
 
-infra_template=$(ls "$script_dir/../infrastructure-templates" | fzf)
+infra_template=$(ls "$templates_dir" | fzf --prompt "Choose An Infrastructure template")
 
-mkdir -p "$dir_path"
+mkdir -p "$destination_path"
 
-pushd "$dir_path" > /dev/null 2>&1 || exit
+pushd "$destination_path" >/dev/null 2>&1 || exit
 mkdir -p .secrets
 
 touch .secrets/env
 
-
-cat > Taskfile.yml <<EOF
+cat >Taskfile.yml <<EOF
 version: 3
 
 dotenv:
@@ -30,7 +29,7 @@ vars:
 tasks:
   sync-from-template:
     vars:
-      InfrastructureTemplate: ../../infrastructure-templates/$infra_template
+      InfrastructureTemplate: $(realpath $SCRIPT_DIR/../infrastructure-templates/${infra_template} --relative-to=$destination_path)
     env:
       SHELL: bash
     silent: true
