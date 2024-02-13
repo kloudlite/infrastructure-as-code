@@ -50,18 +50,21 @@ resource "aws_launch_template" "spot_template" {
     }
   }
 
-  network_interfaces {
-    associate_public_ip_address = true
-    security_groups             = var.security_groups
-  }
+  vpc_security_group_ids = var.vpc != null ? var.vpc.vpc_security_group_ids : null
+
+  #  network_interfaces {
+  #    associate_public_ip_address = true
+  #    security_groups             = var.vpc == null ?  var.security_groups : null
+  #    subnet_id                   = var.vpc != null ? var.vpc.subnet_id : null
+  #  }
 
   tag_specifications {
     resource_type = "instance"
-    tags          = merge({
+    tags          = merge(var.tags, {
       Name        = "${var.tracker_id}-${var.node_name}"
       Terraform   = "true"
       ReferenceId = var.tracker_id
-    }, var.tags)
+    })
   }
 }
 
@@ -97,6 +100,7 @@ resource "aws_spot_fleet_request" "cpu_spot_fleet" {
     }
 
     overrides {
+      subnet_id         = var.vpc.subnet_id
       availability_zone = var.availability_zone != "" ? var.availability_zone : null
       instance_requirements {
         burstable_performance = "excluded"
@@ -156,6 +160,7 @@ resource "aws_spot_fleet_request" "gpu_spot_fleet" {
     dynamic "overrides" {
       for_each = {for idx, config in var.gpu_node.instance_types : idx => config}
       content {
+        subnet_id         = var.vpc.subnet_id
         availability_zone = var.availability_zone
         instance_type     = overrides.value
         #        spot_price        = null

@@ -21,7 +21,8 @@ vpc:
       cidr: 10.0.3.0/24
 
 k3s_masters:
-  image_id: ami-06d146e85d1709abb
+  # image_id: ami-06d146e85d1709abb
+  image_id: &imageId ami-0ec149e1e8b76e957
   image_ssh_username: ubuntu
   instance_type: "c6a.large"
   nvidia_gpu_enabled: false
@@ -64,43 +65,45 @@ k3s_masters:
       availability_zone: ap-south-1c
         # last_recreated_at: 0
 
-# ec2_nodepools:
-#   np-1:
-#     image_id: ami-06d146e85d1709abb
-#     image_ssh_username: ubuntu
-#     availability_zone: "ap-south-1a"
-#     instance_type: "c6a.large"
-#     nvidia_gpu_enabled: false
-#     root_volume_type: gp3
-#     root_volume_size: 50
-#     iam_instance_profile: "kloudlite-instance-profile"
-#     nodes:
-#       node-1: { }
+ec2_nodepools:
+  np-1:
+    # image_id: ami-06d146e85d1709abb
+    image_id: *imageId
+    image_ssh_username: ubuntu
+    availability_zone: "ap-south-1a"
+    instance_type: "c6a.large"
+    nvidia_gpu_enabled: false
+    root_volume_type: gp3
+    root_volume_size: 50
+    # iam_instance_profile: "kloudlite-instance-profile"
+    nodes:
+      node-1: { }
 
 # ec2_nodepools: {}
 # spot_nodepools: {}
 
-# spot_nodepools:
-#   spot-np-1:
-#     image_id: ami-0fdcdf796bf63edfd
-#     image_ssh_username: ubuntu
-#     availability_zone: "ap-south-1b"
-#     nvidia_gpu_enabled: false
-#     root_volume_type: gp3
-#     root_volume_size: 80
-#     # iam_instance_profile: "kloudlite-instance-profile"
-#     spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
-#     gpu_node:
-#       instance_types: ["g5.xlarge"]
-#     # cpu_node:
-#     #   vcpu:
-#     #     min: 1
-#     #     max: 2
-#     #   memory_per_vcpu:
-#     #     min: 2
-#     #     max: 4
-#     nodes:
-#       node-1: { }
+spot_nodepools:
+  spot-np-1:
+    # image_id: ami-0fdcdf796bf63edfd
+    image_id: *imageId
+    image_ssh_username: ubuntu
+    availability_zone: "ap-south-1b"
+    nvidia_gpu_enabled: false
+    root_volume_type: gp3
+    root_volume_size: 50
+    # iam_instance_profile: "kloudlite-instance-profile"
+    spot_fleet_tagging_role_name: "aws-ec2-spot-fleet-tagging-role"
+    # gpu_node:
+    #   instance_types: ["g5.xlarge"]
+    cpu_node:
+      vcpu:
+        min: 1
+        max: 2
+      memory_per_vcpu:
+        min: 2
+        max: 4
+    nodes:
+      node-1: { }
 
 enable_nvidia_gpu_support: false
 kloudlite_params:
@@ -118,10 +121,10 @@ kloudlite_params:
 extra_server_args:
   - --snapshotter
   - "stargz"
-# extra_agent_args:
-#   - --snapshotter
-#   - "stargz"
+extra_agent_args:
+  - --snapshotter
+  - "stargz"
 
 save_ssh_key_to_path: .secrets/${TRACKER_ID}.pem
 save_kubeconfig_to_path: .secrets/${TRACKER_ID}.kubeconfig
-# save_worker_ssh_key_to_path: .secrets/${TRACKER_ID}-worker.pem
+save_worker_ssh_key_to_path: .secrets/${TRACKER_ID}-worker.pem
