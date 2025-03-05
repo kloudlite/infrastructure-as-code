@@ -1,0 +1,345 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'kloudlite platform installation'
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Default: "kloudlite-test"
+
+  InstanceType:
+    Type: String
+    Default: t3.medium
+
+Resources:
+  # VPC
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-vpc'
+
+  # Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-internet-gateway'
+
+  # Attaching Internet Gateway to vpc
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Public Subnet for ALB
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-public-subnet-1'
+
+  # PublicSubnet2:
+  #   Type: AWS::EC2::Subnet
+  #   Properties:
+  #     VpcId: !Ref VPC
+  #     CidrBlock: 10.0.2.0/24
+  #     AvailabilityZone: !Select [1, !GetAZs !Ref Region]
+  #     MapPublicIpOnLaunch: true
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub '${NamePrefix}-public-subnet-2'
+  #
+  # PublicSubnet3:
+  #   Type: AWS::EC2::Subnet
+  #   Properties:
+  #     VpcId: !Ref VPC
+  #     CidrBlock: 10.0.3.0/24
+  #     AvailabilityZone: !Select [1, !GetAZs !Ref Region]
+  #     MapPublicIpOnLaunch: true
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub '${NamePrefix}-public-subnet-2'
+
+  # Route Tables
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  # PublicSubnet2RouteTableAssociation:
+  #   Type: AWS::EC2::SubnetRouteTableAssociation
+  #   Properties:
+  #     SubnetId: !Ref PublicSubnet2
+  #     RouteTableId: !Ref PublicRouteTable
+
+  # Security Groups
+  NLBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public access to NLB for HTTP, and HTTPs
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  # Security Group (internal access only)
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Internal security group for kloudlite cluster
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref NLBSecurityGroup
+
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref NLBSecurityGroup
+
+        - IpProtocol: tcp
+          FromPort: 6443
+          ToPort: 6443
+          CidrIp: 10.0.0.0/16    # VPC internal only
+
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          # CidrIp: 10.0.0.0/16    # VPC internal only
+          CidrIp: 0.0.0.0/0    # for all
+
+  # Network Load Balancer (SSL Passthrough)
+  NetworkLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+        - !Ref PublicSubnet1
+        # - !Ref PublicSubnet2
+      Scheme: internet-facing
+      Type: network
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-nlb'
+
+  NLBTargetGroupHTTP:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: TCP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckProtocol: TCP
+
+  NLBTargetGroupHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 443
+      Protocol: TCP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckProtocol: TCP
+
+  NLBListenerHTTP:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 80
+      Protocol: TCP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroupHTTP
+
+  NLBListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 443
+      Protocol: TCP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroupHTTPS
+
+  # IAM Role for SSM Access
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+
+  # SSH key pair
+  SSHKeyPair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName: !Sub '${NamePrefix}-ssh-key'
+      KeyType: rsa         # Options: rsa, ed25519
+      KeyFormat: pem       # Options: pem, ppk
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-ssh-key'
+
+  # k3s Master Instance
+  K3sMasterInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref SSHKeyPair
+      # ImageId: !Sub '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+      ImageId: 'ami-00bb6a80f01f03502'
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      IamInstanceProfile: !Ref InstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.25.0+k3s1 sh -s - server \
+            --disable-agent
+          sleep 30
+
+          USER="ubuntu"
+
+          mkdir -p /home/$USER/.kube
+          cp /etc/rancher/k3s/k3s.yaml /home/$USER/.kube/config
+          chown $USER:$USER /home/$USER/.kube/config
+          echo "Master started at $(date)" >> /var/log/k3s-startup.log
+
+          #! /usr/bin/env bash
+          KLOUDLITE_CONFIG_DIRECTORY=/etc/kloudlite
+
+          K3S_SERVER_TOKEN="$(uuidgen)"
+          K3S_AGENT_TOKEN="$(uuidgen)"
+          # --tf params:END
+
+          debug() {
+            echo "[#] $*" | tee -a "$KLOUDLITE_CONFIG_DIRECTORY/execution.log"
+          }
+
+          debug "ensure kloudlite config directory ($KLOUDLITE_CONFIG_DIRECTORY) exists"
+          mkdir -p "$KLOUDLITE_CONFIG_DIRECTORY"
+
+          debug "################# execution started at $(date) ######################"
+          [ $EUID -ne 0 ] && debug "this script must be run as root. current EUID is $EUID" && exit 1
+
+          create_k3s_config_file() {
+            cat >"$KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml" <<EOF
+          cluster-init: true
+          server: "https://0.0.0.0:6443"
+          token: "$K3S_SERVER_TOKEN"
+          agent-token: "$K3S_AGENT_TOKEN"
+
+          # bind-address: 10.17.17.1
+          # advertise-address: 10.17.17.1
+          # node-ip: 10.17.17.1
+
+          tls-san-security: true
+          # tls-san:
+          #   - $K3S_SERVER_HOST
+
+          flannel-iface: kubernetes
+          flannel-backend: "wireguard-native"
+          write-kubeconfig-mode: "0644"
+
+          # node-label:
+          #   - "kloudlite.io/node.ip=$K3S_SERVER_HOST"
+
+          etcd-snapshot-compress: true
+          etcd-snapshot-schedule-cron: "1 2/2 * * *"
+
+          disable-helm-controller: true
+
+          disable: 
+            - "traefik"
+
+          kubelet-arg: "--system-reserved=cpu=250m,memory=250Mi,ephemeral-storage=5Gi,pid=1000"
+          EOF
+
+            mkdir -p /etc/rancher/k3s
+            ln -sf $KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml /etc/rancher/k3s/config.yaml
+          }
+
+          install_k3s() {
+            debug "installing k3s latest stable version"
+            curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=stable sh -
+          }
+
+          {{- /* new_network_interface() { */}}
+          {{- /*   sudo ip link add kubernetes type veth peer name kubernetes */}}
+          {{- /*   sudo ip addr add 10.17.17.0/24 dev kubernetes */}}
+          {{- /*   sudo ip link set kubernetes up */}}
+          {{- /**/}}
+          {{- /*   sudo apt update */}}
+          {{- /*   sudo apt install -y ufw */}}
+          {{- /*   sudo ufw enable */}}
+          {{- /*   echo "1" >/proc/sys/net/ipv4/ip_forward */}}
+          {{- /**/}}
+          {{- /*   sudo ufw default reject incoming */}}
+          {{- /*   sudo ufw allow 80/tcp */}}
+          {{- /*   sudo ufw allow 22 */}}
+          {{- /* } */}}
+
+          create_k3s_config_file
+          install_k3s
+
+          debug "################# execution finished at $(date) ######################"
+
+
+Outputs:
+  NLBDNSName:
+    Description: Public DNS name of the Network Load Balancer (HTTP and HTTPS)
+    Value: !GetAtt NetworkLoadBalancer.DNSName
+  MasterPublicIp:
+    Description: Public IP of k3s master
+    Value: !GetAtt K3sMasterInstance.PublicIp
+  VpcId:
+    Description: VPC ID
+    Value: !Ref VPC
+  SSHKeyPair:
+    Description: SSH key pair
+    Value: !Ref SSHKeyPair
