@@ -232,29 +232,24 @@ Resources:
       KeyName: !Ref SSHKeyPair
       # ImageId: !Sub '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
       ImageId: 'ami-00bb6a80f01f03502'
+      # ImageId: "ami-000cecba75f0e6fb2"
       SubnetId: !Ref PublicSubnet1
       SecurityGroupIds:
         - !Ref SecurityGroup
       IamInstanceProfile: !Ref InstanceProfile
       UserData:
         Fn::Base64: !Sub |
-          #!/bin/bash
-          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.25.0+k3s1 sh -s - server \
-            --disable-agent
-          sleep 30
-
-          USER="ubuntu"
-
-          mkdir -p /home/$USER/.kube
-          cp /etc/rancher/k3s/k3s.yaml /home/$USER/.kube/config
-          chown $USER:$USER /home/$USER/.kube/config
-          echo "Master started at $(date)" >> /var/log/k3s-startup.log
-
           #! /usr/bin/env bash
           KLOUDLITE_CONFIG_DIRECTORY=/etc/kloudlite
 
+          ## terraform params
+          # K3S_SERVER_HOST="!GetAtt NetworkLoadBalancer.DNSName"
+          K3S_SERVER_HOST="0.0.0.0"
           K3S_SERVER_TOKEN="$(uuidgen)"
           K3S_AGENT_TOKEN="$(uuidgen)"
+          K3S_VERSION=""
+          NODE_NAME="master-1"
+          INTERNAL_NODE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
           # --tf params:END
 
           debug() {
@@ -268,26 +263,26 @@ Resources:
           [ $EUID -ne 0 ] && debug "this script must be run as root. current EUID is $EUID" && exit 1
 
           create_k3s_config_file() {
+            echo "$INTERNAL_NODE_IP $NODE_NAME" >> /etc/hosts
+
             cat >"$KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml" <<EOF
           cluster-init: true
-          server: "https://0.0.0.0:6443"
+          server: "https://$K3S_SERVER_HOST:6443"
           token: "$K3S_SERVER_TOKEN"
           agent-token: "$K3S_AGENT_TOKEN"
 
-          # bind-address: 10.17.17.1
-          # advertise-address: 10.17.17.1
-          # node-ip: 10.17.17.1
+          node-name: "$NODE_NAME"
+          node-ip: $INTERNAL_NODE_IP
 
           tls-san-security: true
-          # tls-san:
-          #   - $K3S_SERVER_HOST
+          tls-san:
+            - $NODE_NAME
 
           flannel-iface: kubernetes
           flannel-backend: "wireguard-native"
           write-kubeconfig-mode: "0644"
-
-          # node-label:
-          #   - "kloudlite.io/node.ip=$K3S_SERVER_HOST"
+          node-label:
+            - "kloudlite.io/node.ip=$INTERNAL_NODE_IP"
 
           etcd-snapshot-compress: true
           etcd-snapshot-schedule-cron: "1 2/2 * * *"
@@ -297,7 +292,10 @@ Resources:
           disable: 
             - "traefik"
 
-          kubelet-arg: "--system-reserved=cpu=250m,memory=250Mi,ephemeral-storage=5Gi,pid=1000"
+          kubelet-arg:
+            - "system-reserved=cpu=50m,memory=50Mi,ephemeral-storage=2Gi"
+            - "kube-reserved=cpu=100m,memory=256Mi"
+            - "eviction-hard=nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%"
           EOF
 
             mkdir -p /etc/rancher/k3s
@@ -305,24 +303,15 @@ Resources:
           }
 
           install_k3s() {
-            debug "installing k3s latest stable version"
-            curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=stable sh -
-          }
+            debug "installing k3s"
+            export INSTALL_K3S_CHANNEL="stable"
+            export INSTALL_K3S_SKIP_SELINUX_RPM="true"
 
-          {{- /* new_network_interface() { */}}
-          {{- /*   sudo ip link add kubernetes type veth peer name kubernetes */}}
-          {{- /*   sudo ip addr add 10.17.17.0/24 dev kubernetes */}}
-          {{- /*   sudo ip link set kubernetes up */}}
-          {{- /**/}}
-          {{- /*   sudo apt update */}}
-          {{- /*   sudo apt install -y ufw */}}
-          {{- /*   sudo ufw enable */}}
-          {{- /*   echo "1" >/proc/sys/net/ipv4/ip_forward */}}
-          {{- /**/}}
-          {{- /*   sudo ufw default reject incoming */}}
-          {{- /*   sudo ufw allow 80/tcp */}}
-          {{- /*   sudo ufw allow 22 */}}
-          {{- /* } */}}
+            if [ -n "$K3S_VERSION" ]; then
+              export INSTALL_K3S_VERSION="$K3S_VERSION"
+            fi
+            curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server" sh -
+          }
 
           create_k3s_config_file
           install_k3s

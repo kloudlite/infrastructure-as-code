@@ -2,10 +2,15 @@
 
 KLOUDLITE_CONFIG_DIRECTORY=/etc/kloudlite
 
-K3S_SERVER_HOST="${k3s_server_host:-0.0.0.0}"
-
-K3S_SERVER_TOKEN="${k3s_server_token:-$(uuidgen)}"
-K3S_AGENT_TOKEN="${k3s_agent_token:-$(uuidgen)}"
+## terraform params
+K3S_SERVER_HOST="${k3s_server_host}"
+K3S_SERVER_TOKEN="${k3s_server_token}"
+K3S_AGENT_TOKEN="${k3s_agent_token}"
+K3S_VERSION="${k3s_version}"
+NODE_NAME="${node_name}"
+NODE_LABELS=${jsonencode([ for k,v in node_labels: "${k}=${v}" ])}
+NODE_TAINTS=${jsonencode([ for taint in node_taints: "${taint.key}=${taint.value}:${taint.effect}" ])}
+INTERNAL_NODE_IP=${internal_node_ip}
 # --tf params:END
 
 debug() {
@@ -19,25 +24,26 @@ debug "################# execution started at $(date) ######################"
 [ $EUID -ne 0 ] && debug "this script must be run as root. current EUID is $EUID" && exit 1
 
 create_k3s_config_file() {
+  echo "$INTERNAL_NODE_IP $NODE_NAME" >> /etc/hosts
+
   cat >"$KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml" <<EOF
 cluster-init: true
 server: "https://$K3S_SERVER_HOST:6443"
 token: "$K3S_SERVER_TOKEN"
 agent-token: "$K3S_AGENT_TOKEN"
 
-bind-address: 10.17.17.1
-advertise-address: 10.17.17.1
-node-ip: 10.17.17.1
+node-name: "$NODE_NAME"
+node-ip: $INTERNAL_NODE_IP
 
 tls-san-security: true
 tls-san:
-  - $K3S_SERVER_HOST
+  - $NODE_NAME
 
 flannel-iface: kubernetes
 flannel-backend: "wireguard-native"
 write-kubeconfig-mode: "0644"
 node-label:
-  - "kloudlite.io/node.ip=$K3S_SERVER_HOST"
+  - "kloudlite.io/node.ip=$INTERNAL_NODE_IP"
 
 etcd-snapshot-compress: true
 etcd-snapshot-schedule-cron: "1 2/2 * * *"
@@ -47,7 +53,10 @@ disable-helm-controller: true
 disable: 
   - "traefik"
 
-kubelet-arg: "--system-reserved=cpu=250m,memory=250Mi,ephemeral-storage=5Gi,pid=1000"
+kubelet-arg:
+  - "system-reserved=cpu=50m,memory=50Mi,ephemeral-storage=2Gi"
+  - "kube-reserved=cpu=100m,memory=256Mi"
+  - "eviction-hard=nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%"
 EOF
 
   mkdir -p /etc/rancher/k3s
@@ -55,28 +64,18 @@ EOF
 }
 
 install_k3s() {
-  debug "installing k3s latest stable version"
-  curl -Lo /usr/local/bin/k3s https://github.com/k3s-io/k3s/releases/download/v1.26.5+k3s1/k3s
-  chmod a+x /usr/local/bin/k3s
-  # curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=stable sh -
-}
+  debug "installing k3s"
+  export INSTALL_K3S_CHANNEL="stable"
+  export INSTALL_K3S_SKIP_SELINUX_RPM="true"
 
-# new_network_interface() {
-#   sudo ip link add kubernetes type veth peer name kubernetes
-#   sudo ip addr add 10.17.17.0/24 dev kubernetes
-#   sudo ip link set kubernetes up
-#
-#   sudo apt update
-#   sudo apt install -y ufw
-#   sudo ufw enable
-#   echo "1" >/proc/sys/net/ipv4/ip_forward
-#
-#   sudo ufw default reject incoming
-#   sudo ufw allow 80/tcp
-#   sudo ufw allow 22
-# }
+  if [ -n "$K3S_VERSION" ]; then
+    export INSTALL_K3S_VERSION="$K3S_VERSION"
+  fi
+  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server" sh -
+}
 
 create_k3s_config_file
 install_k3s
 
 debug "################# execution finished at $(date) ######################"
+# vim: set ft=bash:
