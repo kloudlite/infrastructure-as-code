@@ -60,6 +60,29 @@ Resources:
           ToPort: 6443
           CidrIp: 10.0.0.0/16    # VPC internal only
 
+        # for etcd across nodes [source](https://docs.k3s.io/installation/requirements#networking)
+        - IpProtocol: tcp
+          FromPort: 2379
+          ToPort: 2379
+          CidrIp: 10.0.0.0/16    # VPC internal only
+
+        - IpProtocol: tcp
+          FromPort: 2380
+          ToPort: 2380
+          CidrIp: 10.0.0.0/16    # VPC internal only
+
+        # for wireguard native UDP access [source](https://docs.k3s.io/installation/requirements#networking)
+        - IpProtocol: udp
+          FromPort: 51820
+          ToPort: 51829
+          CidrIp: 10.0.0.0/16    # VPC internal only
+
+        # for kubelet metrics [source](https://docs.k3s.io/installation/requirements#networking)
+        - IpProtocol: tcp
+          FromPort: 10250
+          ToPort: 10250
+          CidrIp: 10.0.0.0/16    # VPC internal only
+
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
@@ -78,27 +101,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${NamePrefix}-nlb'
-
-  # # Route 53 Hosted Zone (if you don’t already have one)
-  # HostedZone:
-  #   Type: AWS::Route53::HostedZone
-  #   Properties:
-  #     Name: !Sub '${NamePrefix}-hosted-zone'
-  #     HostedZoneTags:
-  #       - Key: Name
-  #         Value: !Sub '${NamePrefix}-hosted-zone'
-  #
-  # # Alias record for the NLB (e.g., nlb.example.com)
-  # NLBAliasRecord:
-  #   Type: AWS::Route53::RecordSet
-  #   Properties:
-  #     HostedZoneId: !Ref HostedZone
-  #     Name: !Sub 'nlb.${DomainName}'  # e.g., nlb.example.com
-  #     Type: A
-  #     AliasTarget:
-  #       DNSName: !GetAtt NetworkLoadBalancer.DNSName
-  #       HostedZoneId: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
-  #     TTL: '300'
 
   NLBTargetGroupHTTP:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -226,8 +228,6 @@ Resources:
           KLOUDLITE_CONFIG_DIRECTORY=/etc/kloudlite
 
           ## terraform params
-          # K3S_SERVER_HOST="!GetAtt NetworkLoadBalancer.DNSName"
-          K3S_SERVER_HOST="0.0.0.0"
           K3S_SERVER_TOKEN="$(uuidgen)"
           K3S_AGENT_TOKEN="$(uuidgen)"
           K3S_VERSION=""
@@ -235,13 +235,13 @@ Resources:
           # --tf params:END
 
           aws ssm put-parameter \
-            --name "${!GetAtt K3sSecretTokenSecret.Name}" \
+            --name "${K3sServerTokenSecret.Name}" \
             --value "$K3S_SERVER_TOKEN" \
             --type "SecureString" \
             --overwrite
 
           aws ssm put-parameter \
-            --name "${!GetAtt K3sAgentTokenSecret.Name}" \
+            --name "${K3sAgentTokenSecret.Name}" \
             --value "$K3S_AGENT_TOKEN" \
             --type "SecureString" \
             --overwrite
@@ -260,24 +260,20 @@ Resources:
           [ $EUID -ne 0 ] && debug "this script must be run as root. current EUID is $EUID" && exit 1
 
           create_k3s_config_file() {
-            echo "$INTERNAL_NODE_IP $NODE_NAME" >> /etc/hosts
-
             cat >"$KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml" <<EOF
           cluster-init: true
-          # server: "https://$K3S_SERVER_HOST:6443"
           token: "$K3S_SERVER_TOKEN"
           agent-token: "$K3S_AGENT_TOKEN"
 
           node-name: "$NODE_NAME"
 
           tls-san-security: true
-          # tls-san:
-          #   - $NODE_NAME
 
           flannel-backend: "wireguard-native"
           write-kubeconfig-mode: "0644"
           node-label:
-            - "kloudlite.io/node.role=primary-master"
+            - "kloudlite.io/node.role=master"
+            - "kloudlite.io/node.master.type=primary"
             - "kloudlite.io/node.ip=$INTERNAL_NODE_IP"
 
           etcd-snapshot-compress: true
@@ -316,6 +312,7 @@ Resources:
 
   MasterNode2:
     Type: AWS::EC2::Instance
+    DependsOn: MasterNode1
     Properties:
       InstanceType: !Ref InstanceType
       KeyName: !Ref SSHKeyPair
@@ -336,15 +333,14 @@ Resources:
           KLOUDLITE_CONFIG_DIRECTORY=/etc/kloudlite
 
           ## terraform params
-          # K3S_SERVER_HOST="!GetAtt NetworkLoadBalancer.DNSName"
-          K3S_SERVER_HOST='https://${!GetAtt MasterNode1.PrivateIp}:6443'
+          K3S_SERVER_HOST='${MasterNode1.PrivateIp}'
           K3S_SERVER_TOKEN=$(aws ssm get-parameter \
-              --name "${!GetAtt K3sServerTokenSecret.Name}" \
+              --name "${K3sServerTokenSecret.Name}" \
               --with-decryption \
               --query "Parameter.Value" \
               --output text)
           K3S_AGENT_TOKEN=$(aws ssm get-parameter \
-              --name "${!GetAtt K3sAgentTokenSecret.Name}" \
+              --name "${K3sAgentTokenSecret.Name}" \
               --with-decryption \
               --query "Parameter.Value" \
               --output text)
@@ -363,10 +359,7 @@ Resources:
           [ $EUID -ne 0 ] && debug "this script must be run as root. current EUID is $EUID" && exit 1
 
           create_k3s_config_file() {
-            echo "$INTERNAL_NODE_IP $NODE_NAME" >> /etc/hosts
-
             cat >"$KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml" <<EOF
-          cluster-init: true
           server: "https://$K3S_SERVER_HOST:6443"
           token: "$K3S_SERVER_TOKEN"
           agent-token: "$K3S_AGENT_TOKEN"
@@ -374,13 +367,12 @@ Resources:
           node-name: "$NODE_NAME"
 
           tls-san-security: true
-          # tls-san:
-          #   - $NODE_NAME
 
           flannel-backend: "wireguard-native"
           write-kubeconfig-mode: "0644"
           node-label:
-            - "kloudlite.io/node.role=secondary-master"
+            - "kloudlite.io/node.role=master"
+            - "kloudlite.io/node.master.type=secondary"
 
           etcd-snapshot-compress: true
           etcd-snapshot-schedule-cron: "1 2/2 * * *"
@@ -418,6 +410,7 @@ Resources:
 
   MasterNode3:
     Type: AWS::EC2::Instance
+    DependsOn: MasterNode1
     Properties:
       InstanceType: !Ref InstanceType
       KeyName: !Ref SSHKeyPair
@@ -429,7 +422,7 @@ Resources:
       IamInstanceProfile: !Ref InstanceProfile
       Tags:
         - Key: Name
-          Value: !Sub '${NamePrefix}-master-node-2'
+          Value: !Sub '${NamePrefix}-master-node-3'
 
       UserData:
         Fn::Base64: !Sub |
@@ -438,10 +431,17 @@ Resources:
           KLOUDLITE_CONFIG_DIRECTORY=/etc/kloudlite
 
           ## terraform params
-          # K3S_SERVER_HOST="!GetAtt NetworkLoadBalancer.DNSName"
-          K3S_SERVER_HOST='https://${!GetAtt MasterNode1.PrivateIp}:6443'
-          K3S_SERVER_TOKEN="$(uuidgen)"
-          K3S_AGENT_TOKEN="$(uuidgen)"
+          K3S_SERVER_HOST=${MasterNode1.PrivateIp}
+          K3S_SERVER_TOKEN=$(aws ssm get-parameter \
+              --name "${K3sServerTokenSecret.Name}" \
+              --with-decryption \
+              --query "Parameter.Value" \
+              --output text)
+          K3S_AGENT_TOKEN=$(aws ssm get-parameter \
+              --name "${K3sAgentTokenSecret.Name}" \
+              --with-decryption \
+              --query "Parameter.Value" \
+              --output text)
           K3S_VERSION=""
           NODE_NAME="master-3"
           # INTERNAL_NODE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
@@ -458,10 +458,7 @@ Resources:
           [ $EUID -ne 0 ] && debug "this script must be run as root. current EUID is $EUID" && exit 1
 
           create_k3s_config_file() {
-            echo "$INTERNAL_NODE_IP $NODE_NAME" >> /etc/hosts
-
             cat >"$KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml" <<EOF
-          cluster-init: true
           server: "https://$K3S_SERVER_HOST:6443"
           token: "$K3S_SERVER_TOKEN"
           agent-token: "$K3S_AGENT_TOKEN"
@@ -469,13 +466,12 @@ Resources:
           node-name: "$NODE_NAME"
 
           tls-san-security: true
-          # tls-san:
-          #   - $NODE_NAME
 
           flannel-backend: "wireguard-native"
           write-kubeconfig-mode: "0644"
           node-label:
-            - "kloudlite.io/node.role=primary-master"
+            - "kloudlite.io/node.role=master"
+            - "kloudlite.io/node.master.type=secondary"
 
           etcd-snapshot-compress: true
           etcd-snapshot-schedule-cron: "1 2/2 * * *"
@@ -516,6 +512,26 @@ Outputs:
     Description: Public DNS name of the Network Load Balancer (HTTP and HTTPS)
     Value: !GetAtt NetworkLoadBalancer.DNSName
 
+  MasterNode1:
+    Description: master node 1
+    Value: !Ref MasterNode1
+
   MasterNode1PublicIp:
-    Description: Public IP of k3s master
+    Description: Public IP of k3s master 1
     Value: !GetAtt MasterNode1.PublicIp
+
+  MasterNode2:
+    Description: master node 2
+    Value: !Ref MasterNode2
+
+  MasterNode2PublicIp:
+    Description: Public IP of k3s master 2
+    Value: !GetAtt MasterNode2.PublicIp
+
+  MasterNode3:
+    Description: master node 3
+    Value: !Ref MasterNode3
+
+  MasterNode3PublicIp:
+    Description: Public IP of k3s master 3
+    Value: !GetAtt MasterNode3.PublicIp
