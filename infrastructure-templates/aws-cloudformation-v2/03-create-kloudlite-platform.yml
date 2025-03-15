@@ -1,0 +1,521 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'kloudlite platform installation'
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Default: "kloudlite-test"
+
+  VPC:
+    Type: String
+    Description: "VPC ID to use"
+    Default: "vpc-047e59d1ad15491b4"
+
+  PublicSubnetID:
+    Type: String
+    Description: "subnet id to use"
+    Default: "subnet-0e4f0634ba1b5be2e"
+
+  InstanceType:
+    Type: String
+    Default: t3.medium
+
+Resources:
+   # Security Groups
+  NLBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public access to NLB for HTTP, and HTTPs
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  # Security Group (internal access only)
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Internal security group for kloudlite cluster
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref NLBSecurityGroup
+
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref NLBSecurityGroup
+
+        - IpProtocol: tcp
+          FromPort: 6443
+          ToPort: 6443
+          CidrIp: 10.0.0.0/16    # VPC internal only
+
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          # CidrIp: 10.0.0.0/16    # VPC internal only
+          CidrIp: 0.0.0.0/0    # for all
+
+  # Network Load Balancer (SSL Passthrough)
+  NetworkLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+        - !Ref PublicSubnetID
+        # - !Ref PublicSubnet2
+      Scheme: internet-facing
+      Type: network
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-nlb'
+
+  # # Route 53 Hosted Zone (if you don’t already have one)
+  # HostedZone:
+  #   Type: AWS::Route53::HostedZone
+  #   Properties:
+  #     Name: !Sub '${NamePrefix}-hosted-zone'
+  #     HostedZoneTags:
+  #       - Key: Name
+  #         Value: !Sub '${NamePrefix}-hosted-zone'
+  #
+  # # Alias record for the NLB (e.g., nlb.example.com)
+  # NLBAliasRecord:
+  #   Type: AWS::Route53::RecordSet
+  #   Properties:
+  #     HostedZoneId: !Ref HostedZone
+  #     Name: !Sub 'nlb.${DomainName}'  # e.g., nlb.example.com
+  #     Type: A
+  #     AliasTarget:
+  #       DNSName: !GetAtt NetworkLoadBalancer.DNSName
+  #       HostedZoneId: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
+  #     TTL: '300'
+
+  NLBTargetGroupHTTP:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: TCP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckProtocol: TCP
+
+  NLBTargetGroupHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 443
+      Protocol: TCP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckProtocol: TCP
+
+  NLBListenerHTTP:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 80
+      Protocol: TCP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroupHTTP
+
+  NLBListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 443
+      Protocol: TCP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroupHTTPS
+
+  # IAM Role for EC2 managment, backups and SSM access
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2FullAccess  # Full EC2 access
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess   # Full S3 access
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore  # SSM core permissions
+      Policies:
+        - PolicyName: SSMParameterStoreAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                  - ssm:PutParameter
+                  - ssm:DeleteParameter
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/stack-${NamePrefix}/*"
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  # SSH key pair
+  SSHKeyPair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName: !Sub '${NamePrefix}-ssh-key'
+      KeyType: rsa         # Options: rsa, ed25519
+      KeyFormat: pem       # Options: pem, ppk
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-ssh-key'
+
+  # shared secrets across cloudformation stack
+  K3sServerTokenSecret:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /stack-${NamePrefix}/k3s-server-token
+      Type: String
+      Value: 'sample'
+      Description: 'Sample SSM Parameter'
+      Tier: 'Standard'
+
+  K3sAgentTokenSecret:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /stack-${NamePrefix}/k3s-agent-token
+      Type: String
+      Value: 'sample'
+      Description: 'Sample SSM Parameter'
+      Tier: 'Standard'
+
+  # k3s Master Instance
+  MasterNode1:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref SSHKeyPair
+      # ImageId: 'ami-00bb6a80f01f03502' #ubuntu image
+      ImageId: "ami-05c179eced2eb9b5b" # Amazon Linux 2023 AMI 2023.6.20250303.0 x86_64 HVM kernel-6.1
+      SubnetId: !Ref PublicSubnetID
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      IamInstanceProfile: !Ref InstanceProfile
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-master-node-1'
+
+      UserData:
+        Fn::Base64: !Sub |
+          #! /usr/bin/env bash
+
+          KLOUDLITE_CONFIG_DIRECTORY=/etc/kloudlite
+
+          ## terraform params
+          # K3S_SERVER_HOST="!GetAtt NetworkLoadBalancer.DNSName"
+          K3S_SERVER_HOST="0.0.0.0"
+          K3S_SERVER_TOKEN="$(uuidgen)"
+          K3S_AGENT_TOKEN="$(uuidgen)"
+          K3S_VERSION=""
+          NODE_NAME="master-1"
+          # --tf params:END
+
+          aws ssm put-parameter \
+            --name "${!GetAtt K3sSecretTokenSecret.Name}" \
+            --value "$K3S_SERVER_TOKEN" \
+            --type "SecureString" \
+            --overwrite
+
+          aws ssm put-parameter \
+            --name "${!GetAtt K3sAgentTokenSecret.Name}" \
+            --value "$K3S_AGENT_TOKEN" \
+            --type "SecureString" \
+            --overwrite
+
+          TOKEN=$(curl -sX PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+          INTERNAL_NODE_IP=$(curl -sH "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
+
+          debug() {
+            echo "[#] $*" | tee -a "$KLOUDLITE_CONFIG_DIRECTORY/execution.log"
+          }
+
+          debug "ensure kloudlite config directory ($KLOUDLITE_CONFIG_DIRECTORY) exists"
+          mkdir -p "$KLOUDLITE_CONFIG_DIRECTORY"
+
+          debug "################# execution started at $(date) ######################"
+          [ $EUID -ne 0 ] && debug "this script must be run as root. current EUID is $EUID" && exit 1
+
+          create_k3s_config_file() {
+            echo "$INTERNAL_NODE_IP $NODE_NAME" >> /etc/hosts
+
+            cat >"$KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml" <<EOF
+          cluster-init: true
+          # server: "https://$K3S_SERVER_HOST:6443"
+          token: "$K3S_SERVER_TOKEN"
+          agent-token: "$K3S_AGENT_TOKEN"
+
+          node-name: "$NODE_NAME"
+
+          tls-san-security: true
+          # tls-san:
+          #   - $NODE_NAME
+
+          flannel-backend: "wireguard-native"
+          write-kubeconfig-mode: "0644"
+          node-label:
+            - "kloudlite.io/node.role=primary-master"
+            - "kloudlite.io/node.ip=$INTERNAL_NODE_IP"
+
+          etcd-snapshot-compress: true
+          etcd-snapshot-schedule-cron: "1 2/2 * * *"
+
+          disable-helm-controller: true
+
+          disable: 
+            - "traefik"
+
+          kubelet-arg:
+            - "system-reserved=cpu=50m,memory=50Mi,ephemeral-storage=2Gi"
+            - "kube-reserved=cpu=100m,memory=256Mi"
+            - "eviction-hard=nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%"
+          EOF
+
+            mkdir -p /etc/rancher/k3s
+            ln -sf $KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml /etc/rancher/k3s/config.yaml
+          }
+
+          install_k3s() {
+            debug "installing k3s"
+            export INSTALL_K3S_CHANNEL="stable"
+            export INSTALL_K3S_SKIP_SELINUX_RPM="true"
+
+            if [ -n "$K3S_VERSION" ]; then
+              export INSTALL_K3S_VERSION="$K3S_VERSION"
+            fi
+            curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server" sh -
+          }
+
+          create_k3s_config_file
+          install_k3s
+
+          debug "################# execution finished at $(date) ######################"
+
+  MasterNode2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref SSHKeyPair
+      # ImageId: 'ami-00bb6a80f01f03502' #ubuntu image
+      ImageId: "ami-05c179eced2eb9b5b" # Amazon Linux 2023 AMI 2023.6.20250303.0 x86_64 HVM kernel-6.1
+      SubnetId: !Ref PublicSubnetID
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      IamInstanceProfile: !Ref InstanceProfile
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-master-node-2'
+
+      UserData:
+        Fn::Base64: !Sub |
+          #! /usr/bin/env bash
+
+          KLOUDLITE_CONFIG_DIRECTORY=/etc/kloudlite
+
+          ## terraform params
+          # K3S_SERVER_HOST="!GetAtt NetworkLoadBalancer.DNSName"
+          K3S_SERVER_HOST='https://${!GetAtt MasterNode1.PrivateIp}:6443'
+          K3S_SERVER_TOKEN=$(aws ssm get-parameter \
+              --name "${!GetAtt K3sServerTokenSecret.Name}" \
+              --with-decryption \
+              --query "Parameter.Value" \
+              --output text)
+          K3S_AGENT_TOKEN=$(aws ssm get-parameter \
+              --name "${!GetAtt K3sAgentTokenSecret.Name}" \
+              --with-decryption \
+              --query "Parameter.Value" \
+              --output text)
+          K3S_VERSION=""
+          NODE_NAME="master-2"
+          # --tf params:END
+
+          debug() {
+            echo "[#] $*" | tee -a "$KLOUDLITE_CONFIG_DIRECTORY/execution.log"
+          }
+
+          debug "ensure kloudlite config directory ($KLOUDLITE_CONFIG_DIRECTORY) exists"
+          mkdir -p "$KLOUDLITE_CONFIG_DIRECTORY"
+
+          debug "################# execution started at $(date) ######################"
+          [ $EUID -ne 0 ] && debug "this script must be run as root. current EUID is $EUID" && exit 1
+
+          create_k3s_config_file() {
+            echo "$INTERNAL_NODE_IP $NODE_NAME" >> /etc/hosts
+
+            cat >"$KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml" <<EOF
+          cluster-init: true
+          server: "https://$K3S_SERVER_HOST:6443"
+          token: "$K3S_SERVER_TOKEN"
+          agent-token: "$K3S_AGENT_TOKEN"
+
+          node-name: "$NODE_NAME"
+
+          tls-san-security: true
+          # tls-san:
+          #   - $NODE_NAME
+
+          flannel-backend: "wireguard-native"
+          write-kubeconfig-mode: "0644"
+          node-label:
+            - "kloudlite.io/node.role=secondary-master"
+
+          etcd-snapshot-compress: true
+          etcd-snapshot-schedule-cron: "1 2/2 * * *"
+
+          disable-helm-controller: true
+
+          disable: 
+            - "traefik"
+
+          kubelet-arg:
+            - "system-reserved=cpu=50m,memory=50Mi,ephemeral-storage=2Gi"
+            - "kube-reserved=cpu=100m,memory=256Mi"
+            - "eviction-hard=nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%"
+          EOF
+
+            mkdir -p /etc/rancher/k3s
+            ln -sf $KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml /etc/rancher/k3s/config.yaml
+          }
+
+          install_k3s() {
+            debug "installing k3s"
+            export INSTALL_K3S_CHANNEL="stable"
+            export INSTALL_K3S_SKIP_SELINUX_RPM="true"
+
+            if [ -n "$K3S_VERSION" ]; then
+              export INSTALL_K3S_VERSION="$K3S_VERSION"
+            fi
+            curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server" sh -
+          }
+
+          create_k3s_config_file
+          install_k3s
+
+          debug "################# execution finished at $(date) ######################"
+
+  MasterNode3:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref SSHKeyPair
+      # ImageId: 'ami-00bb6a80f01f03502' #ubuntu image
+      ImageId: "ami-05c179eced2eb9b5b" # Amazon Linux 2023 AMI 2023.6.20250303.0 x86_64 HVM kernel-6.1
+      SubnetId: !Ref PublicSubnetID
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      IamInstanceProfile: !Ref InstanceProfile
+      Tags:
+        - Key: Name
+          Value: !Sub '${NamePrefix}-master-node-2'
+
+      UserData:
+        Fn::Base64: !Sub |
+          #! /usr/bin/env bash
+
+          KLOUDLITE_CONFIG_DIRECTORY=/etc/kloudlite
+
+          ## terraform params
+          # K3S_SERVER_HOST="!GetAtt NetworkLoadBalancer.DNSName"
+          K3S_SERVER_HOST='https://${!GetAtt MasterNode1.PrivateIp}:6443'
+          K3S_SERVER_TOKEN="$(uuidgen)"
+          K3S_AGENT_TOKEN="$(uuidgen)"
+          K3S_VERSION=""
+          NODE_NAME="master-3"
+          # INTERNAL_NODE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+          # --tf params:END
+
+          debug() {
+            echo "[#] $*" | tee -a "$KLOUDLITE_CONFIG_DIRECTORY/execution.log"
+          }
+
+          debug "ensure kloudlite config directory ($KLOUDLITE_CONFIG_DIRECTORY) exists"
+          mkdir -p "$KLOUDLITE_CONFIG_DIRECTORY"
+
+          debug "################# execution started at $(date) ######################"
+          [ $EUID -ne 0 ] && debug "this script must be run as root. current EUID is $EUID" && exit 1
+
+          create_k3s_config_file() {
+            echo "$INTERNAL_NODE_IP $NODE_NAME" >> /etc/hosts
+
+            cat >"$KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml" <<EOF
+          cluster-init: true
+          server: "https://$K3S_SERVER_HOST:6443"
+          token: "$K3S_SERVER_TOKEN"
+          agent-token: "$K3S_AGENT_TOKEN"
+
+          node-name: "$NODE_NAME"
+
+          tls-san-security: true
+          # tls-san:
+          #   - $NODE_NAME
+
+          flannel-backend: "wireguard-native"
+          write-kubeconfig-mode: "0644"
+          node-label:
+            - "kloudlite.io/node.role=primary-master"
+
+          etcd-snapshot-compress: true
+          etcd-snapshot-schedule-cron: "1 2/2 * * *"
+
+          disable-helm-controller: true
+
+          disable: 
+            - "traefik"
+
+          kubelet-arg:
+            - "system-reserved=cpu=50m,memory=50Mi,ephemeral-storage=2Gi"
+            - "kube-reserved=cpu=100m,memory=256Mi"
+            - "eviction-hard=nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%"
+          EOF
+
+            mkdir -p /etc/rancher/k3s
+            ln -sf $KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml /etc/rancher/k3s/config.yaml
+          }
+
+          install_k3s() {
+            debug "installing k3s"
+            export INSTALL_K3S_CHANNEL="stable"
+            export INSTALL_K3S_SKIP_SELINUX_RPM="true"
+
+            if [ -n "$K3S_VERSION" ]; then
+              export INSTALL_K3S_VERSION="$K3S_VERSION"
+            fi
+            curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server" sh -
+          }
+
+          create_k3s_config_file
+          install_k3s
+
+          debug "################# execution finished at $(date) ######################"
+
+Outputs:
+  NLBDNSName:
+    Description: Public DNS name of the Network Load Balancer (HTTP and HTTPS)
+    Value: !GetAtt NetworkLoadBalancer.DNSName
+
+  MasterNode1PublicIp:
+    Description: Public IP of k3s master
+    Value: !GetAtt MasterNode1.PublicIp
