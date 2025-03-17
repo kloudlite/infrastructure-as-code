@@ -64,20 +64,4 @@ spec:
         hostPath:
           path: /var/user-home
 
----
 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: exposed-services
-spec:
-  containers:
-  - name: exposed-services
-    image: busybox:latest
-    imagePullPolicy: Always
-    command:
-      - sh
-      - -c
-      - |
-  nodeSelector:
-    kloudlite.io/node.role: worker
