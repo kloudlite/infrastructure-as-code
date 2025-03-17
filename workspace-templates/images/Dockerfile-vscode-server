@@ -1,0 +1,15 @@
+FROM ubuntu:24.04
+
+RUN apt update && apt install -y curl
+
+WORKDIR /code
+
+RUN curl -Lk 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64' --output vscode_cli.tar.gz
+
+RUN tar -xf vscode_cli.tar.gz
+
+RUN useradd -m -s /bin/bash kl
+
+USER kl
+
+CMD ["/code/code", "tunnel"]

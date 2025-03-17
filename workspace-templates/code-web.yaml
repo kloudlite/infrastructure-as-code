@@ -3,8 +3,6 @@ kind: Deployment
 metadata:
   name: code-web-service
 spec:
-  nodeSelector:
-    kloudlite.io/node.role: worker
   selector:
     matchLabels:
       app: code-web-service
@@ -13,9 +11,55 @@ spec:
       labels:
         app: code-web-service
     spec:
+      nodeSelector:
+        kloudlite.io/node.role: worker
+      initContainers:
+        - name: init-home-dir
+          image: busybox
+          command: ["sh", "-c", "chown -R 1000:1000 /var/user-home"]
+          volumeMounts:
+            - mountPath: /var/user-home
+              name: home-dir
       containers:
-      - name: code-web-service
-        image: ubuntu:24.04
-        command: ["/bin/bash", "-c", "/usr/sbin/sshd -D"]
+      - name: ssh
+        image: ghcr.io/kloudlite/iac/workspace:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 22
+        volumeMounts:
+          - mountPath: /home/kl
+            name: home-dir
+      - name: jupyter
+        image: ghcr.io/kloudlite/iac/jupyter:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8888
+        volumeMounts:
+          - mountPath: /home/kl
+            name: home-dir
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+      - name: vscode-server
+        image: ghcr.io/kloudlite/iac/vscode-server:latest
+        imagePullPolicy: Always
+        volumeMounts:
+          - mountPath: /home/kl
+            name: home-dir
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+      - name: code-server
+        image: ghcr.io/kloudlite/iac/code-server:latest
+        imagePullPolicy: Always
+        volumeMounts:
+          - mountPath: /home/kl
+            name: home-dir
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+
+      volumes:
+      - name: home-dir
+        hostPath:
+          path: /var/user-home

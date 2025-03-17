@@ -1,0 +1,11 @@
+FROM ubuntu:24.04
+
+RUN apt update && apt install -y curl
+
+RUN curl -fsSL https://code-server.dev/install.sh | sh
+
+RUN useradd -m -s /bin/bash kl
+
+USER kl
+
+CMD ["code-server", "--auth", "none"]
