@@ -16,7 +16,7 @@ spec:
       initContainers:
         - name: init-home-dir
           image: busybox
-          command: ["sh", "-c", "chown -R 1000:1000 /var/user-home"]
+          command: ["sh", "-c", "chown -R 1001:1001 /var/user-home"]
           volumeMounts:
             - mountPath: /var/user-home
               name: home-dir
@@ -39,7 +39,7 @@ spec:
             name: home-dir
         securityContext:
           runAsUser: 1001
-          runAsGroup: 1000
+          runAsGroup: 1001
       - name: vscode-server
         image: ghcr.io/kloudlite/iac/vscode-server:latest
         imagePullPolicy: Always
@@ -48,7 +48,7 @@ spec:
             name: home-dir
         securityContext:
           runAsUser: 1001
-          runAsGroup: 1000
+          runAsGroup: 1001
       - name: code-server
         image: ghcr.io/kloudlite/iac/code-server:latest
         imagePullPolicy: Always
@@ -57,7 +57,7 @@ spec:
             name: home-dir
         securityContext:
           runAsUser: 1001
-          runAsGroup: 1000
+          runAsGroup: 1001
 
       volumes:
       - name: home-dir
