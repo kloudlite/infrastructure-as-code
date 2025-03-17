@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-web-service
+spec:
+  nodeSelector:
+    kloudlite.io/node.role: worker
+  selector:
+    matchLabels:
+      app: code-web-service
+  template:
+    metadata:
+      labels:
+        app: code-web-service
+    spec:
+      containers:
+      - name: code-web-service
+        image: ubuntu:24.04
+        command: ["/bin/bash", "-c", "/usr/sbin/sshd -D"]
+        ports:
+        - containerPort: 22
