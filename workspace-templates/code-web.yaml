@@ -38,7 +38,7 @@ spec:
           - mountPath: /home/kl
             name: home-dir
         securityContext:
-          runAsUser: 1000
+          runAsUser: 1001
           runAsGroup: 1000
       - name: vscode-server
         image: ghcr.io/kloudlite/iac/vscode-server:latest
@@ -47,7 +47,7 @@ spec:
           - mountPath: /home/kl
             name: home-dir
         securityContext:
-          runAsUser: 1000
+          runAsUser: 1001
           runAsGroup: 1000
       - name: code-server
         image: ghcr.io/kloudlite/iac/code-server:latest
@@ -56,7 +56,7 @@ spec:
           - mountPath: /home/kl
             name: home-dir
         securityContext:
-          runAsUser: 1000
+          runAsUser: 1001
           runAsGroup: 1000
 
       volumes:
