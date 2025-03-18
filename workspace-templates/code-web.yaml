@@ -15,51 +15,110 @@ spec:
         kloudlite.io/node.role: worker
       initContainers:
         - name: init-home-dir
-          image: busybox
-          command: ["sh", "-c", "chown -R 1001:1001 /var/user-home"]
+          image: ghcr.io/abdheshnayak/box:v1.0.0
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          command:
+          - "sh"
+          - "-c"
+          - |
+            set -e
+            if [ ! -d "/nix/store" ]; then
+              curl -L https://nixos.org/nix/install | sh
+            fi
+            
+            if [ ! -f "/home/kl/.local/bin/kl" ]; then
+                  mkdir -p /home/kl/.local/bin
+                  cd /home/kl/.local/bin
+                  curl https://i.jpillora.com/kloudlite/kl@v1.1.7-nightly | sh
+            fi
+
+            if [ ! -d "/home/kl/.kl" ]; then
+                  mkdir -p /home/kl/.kl
+                  sh -c 'cat > /home/kl/.kl/kl-session.yaml <<EOF
+                  session: sess-0uu-zwri6c7lfnyk3vi0-rpqmnis
+                  team: demo-account
+                  env: ab-env
+                  EOF'
+            fi
           volumeMounts:
-            - mountPath: /var/user-home
+            - mountPath: /home/kl
               name: home-dir
+            - mountPath: /nix
+              name: nix-dir
       containers:
       - name: ssh
-        image: ghcr.io/kloudlite/iac/workspace:latest
+        image: ghcr.io/abdheshnayak/box:v1.0.0
         imagePullPolicy: Always
+        command:
+          - bash
+          - -c
+          - |
+            sshd -D
         ports:
         - containerPort: 22
         volumeMounts:
-          - mountPath: /home/kl
-            name: home-dir
-      - name: jupyter
-        image: ghcr.io/kloudlite/iac/jupyter:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8888
-        volumeMounts:
-          - mountPath: /home/kl
-            name: home-dir
-        securityContext:
-          runAsUser: 1001
-          runAsGroup: 1001
-      - name: vscode-server
-        image: ghcr.io/kloudlite/iac/vscode-server:latest
-        imagePullPolicy: Always
-        volumeMounts:
-          - mountPath: /home/kl
-            name: home-dir
-        securityContext:
-          runAsUser: 1001
-          runAsGroup: 1001
-      - name: code-server
-        image: ghcr.io/kloudlite/iac/code-server:latest
-        imagePullPolicy: Always
-        volumeMounts:
-          - mountPath: /home/kl
-            name: home-dir
-        securityContext:
-          runAsUser: 1001
-          runAsGroup: 1001
+        - mountPath: /home/kl
+          name: home-dir
+        - mountPath: /nix
+          name: nix-dir
+      # - name: busybox
+      #   image: ghcr.io/abdheshnayak/box:v1.0.0
+      #   command: ["sleep", "3600"]
+      #   volumeMounts:
+      #     - mountPath: /home/kl
+      #       name: home-dir
+      #   command:
+      #     - bash
+      #     - -c
+      #     - |
+      #       /start.sh
+      #       source /home/kl/.profile
+      #       sudo sh -c 'cat > /home/kl/.kl/kl-extra-data.yaml <<EOF
+      #       baseUrl: https://auth.kloudlite.io
+      #       dnsHostSuffix: khost.dev
+      #       lastUpdateCheck: "2025-02-05T12:18:24.071075127+05:30"
+      #       backupDns: []
+      #       EOF'
+      #       sshd -D
+        # securityContext:
+        #   runAsUser: 1000
+        #   runAsGroup: 1000
+      #- name: jupyter
+      #  image: ghcr.io/kloudlite/iac/jupyter:latest
+      #  imagePullPolicy: Always
+      #  ports:
+      #  - containerPort: 8888
+      #  volumeMounts:
+      #    - mountPath: /home/kl
+      #      name: home-dir
+      #  securityContext:
+      #    runAsUser: 1001
+      #    runAsGroup: 1001
+      #- name: vscode-server
+      #  image: ghcr.io/kloudlite/iac/vscode-server:latest
+      #  imagePullPolicy: Always
+      #  volumeMounts:
+      #    - mountPath: /home/kl
+      #      name: home-dir
+      #  securityContext:
+      #    runAsUser: 1001
+      #    runAsGroup: 1001
+      #- name: code-server
+      #  image: ghcr.io/kloudlite/iac/code-server:latest
+      #  imagePullPolicy: Always
+      #  volumeMounts:
+      #    - mountPath: /home/kl
+      #      name: home-dir
+      #  securityContext:
+      #    runAsUser: 1001
+      #    runAsGroup: 1001
 
       volumes:
       - name: home-dir
         hostPath:
-          path: /var/user-home
+          path: /var/user-home/
+      - name: nix-dir
+        hostPath:
+          path: /var/nix-dir/
