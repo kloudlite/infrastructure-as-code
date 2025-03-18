@@ -9,5 +9,7 @@ RUN apt-get update && apt-get install -y openssh-server && \
 # Expose SSH Port
 EXPOSE 22
 
+RUN useradd -m -s /bin/bash -u 1001 kl
+
 # Start SSH Daemon
 CMD ["/usr/sbin/sshd", "-D"]
