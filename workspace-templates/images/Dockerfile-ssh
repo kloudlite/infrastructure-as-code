@@ -1,16 +1,30 @@
 FROM ubuntu:24.04
 
 # Install OpenSSH Server
-RUN apt-get update && apt-get install -y openssh-server && \
-    mkdir /var/run/sshd && \
+RUN apt-get update && apt-get install -y git openssh-server zsh xz-utils curl 
+
+RUN mkdir /var/run/sshd && \
     echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && \
     echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && \
-    echo 'root:rootpassword' | chpasswd
+    echo 'PermitUserEnvironment yes' >> /etc/ssh/sshd_config
+
+
+
+RUN userdel ubuntu || echo "ubuntu user already deleted"
+RUN groupadd -g 1000 kl && useradd -u 1000 -g 1000 -m kl && usermod -aG sudo kl && chsh -s $(which zsh) kl
+  # echo "kl ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/kl
+
+RUN sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' /etc/pam.d/sshd
+
+RUN mkdir -p "/home/kl/.config/zsh"
+RUN git clone https://github.com/sindresorhus/pure.git "/home/kl/.config/zsh/pure"
+
+RUN git clone https://github.com/zsh-users/zsh-syntax-highlighting.git  "/usr/share/zsh/plugins/zsh-syntax-highlighting"
+
+COPY .zshrc .aliasrc /tmp/
 
 # Expose SSH Port
 EXPOSE 22
-
-RUN useradd -m -s /bin/bash -u 1001 kl
 
 # Start SSH Daemon
 CMD ["/usr/sbin/sshd", "-D"]
