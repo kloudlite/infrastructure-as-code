@@ -42,3 +42,9 @@ export PATH=$PATH:$HOME/.local/bin
 source /home/kl/.nix-profile/etc/profile.d/nix.sh
 mkdir -p $KL_WORKSPACE
 cd $KL_WORKSPACE
+
+export PS1='$(kl checkchanges)'"$PS1"
+
+reload () {
+  pkill
+}

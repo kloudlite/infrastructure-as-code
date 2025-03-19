@@ -24,6 +24,8 @@ spec:
           env:
             - name: KL_WORKSPACE
               value: "workspaces/ws-name"
+            - name: HOME
+              value: "/home/kl"
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
@@ -46,7 +48,7 @@ spec:
             if [ ! -f "/home/kl/.local/bin/kl" ]; then
                   mkdir -p /home/kl/.local/bin
                   cd /home/kl/.local/bin
-                  curl https://i.jpillora.com/kloudlite/kl@v1.1.7-nightly | bash
+                  curl https://i.jpillora.com/kloudlite/kl@1.1.71-nightly | bash
             fi
 
             if [ ! -d "/home/kl/.config/zsh/pure" ]; then
@@ -77,11 +79,35 @@ spec:
               name: home-dir
             - mountPath: /nix
               name: nix-dir
+            - mountPath: /env
+              name: containerenv
+        - name: envsetup
+          image: ghcr.io/kloudlite/iac/workspace:latest
+          env:
+            - name: KL_WORKSPACE
+              value: "workspaces/ws-name"
+            - name: HOME
+              value: "/home/kl"
+          command:
+          - "bash"
+          - "-c"
+          - |
+            set -e
+            if [[ -f /home/kl/$KL_WORKSPACE/kl.yaml || -f /home/kl/$KL_WORKSPACE/kl.yml ]]; then
+              cd /home/kl/$KL_WORKSPACE
+              runuser kl -c "PATH=$PATH:/home/kl/.nix-profile/bin /home/kl/.local/bin/kl shell -r >  /env/.env"
+              runuser kl -c "PATH=$PATH:/home/kl/.nix-profile/bin /home/kl/.local/bin/kl shell -r"
+            fi
+          volumeMounts:
+            - mountPath: /home/kl
+              name: home-dir
+            - mountPath: /nix
+              name: nix-dir
+            - mountPath: /env
+              name: containerenv
+      
       containers:
       - name: ssh
-        securityContext:
-          runAsUser: 1000
-          runAsGroup: 1000
         image: ghcr.io/kloudlite/iac/workspace:latest
         imagePullPolicy: Always
         env:
@@ -94,16 +120,17 @@ spec:
           - -c
           - |
             set -e
-            # echo "KL_WORKSPACE=/home/kl/$(KL_WORKSPACE)" | tee -a /etc/environment
-            # echo "KL_BOX_MODE=true" | tee -a /etc/environment
-            # echo "HOST=box" | tee -a /etc/environment
-            # cd /home/kl/$(KL_WORKSPACE)
-            env sshd -D -d
+            cat /env/.env >> /etc/environment
+            echo "HOST=box" >> /etc/environment
+            echo "KL_WORKSPACE=$(KL_WORKSPACE)" >> /etc/environment
+            env sshd -D
         volumeMounts:
         - mountPath: /home/kl
           name: home-dir
         - mountPath: /nix
           name: nix-dir
+        - mountPath: /env
+          name: containerenv
       # - name: busybox
       #   image: ghcr.io/abdheshnayak/box:v1.0.0
       #   command: ["sleep", "3600"]
@@ -157,6 +184,8 @@ spec:
       #    runAsGroup: 1001
 
       volumes:
+      - name: containerenv
+        emptyDir: {}
       - name: home-dir
         hostPath:
           path: /var/user-home/
