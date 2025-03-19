@@ -79,6 +79,9 @@ spec:
               name: nix-dir
       containers:
       - name: ssh
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
         image: ghcr.io/kloudlite/iac/workspace:latest
         imagePullPolicy: Always
         env:
@@ -91,11 +94,11 @@ spec:
           - -c
           - |
             set -e
-            echo "KL_WORKSPACE=/home/kl/$(KL_WORKSPACE)" | tee -a /etc/environment
-            echo "KL_BOX_MODE=true" | tee -a /etc/environment
-            echo "HOST=box" | tee -a /etc/environment
-            cd /home/kl/$(KL_WORKSPACE)
-            env sshd -D
+            # echo "KL_WORKSPACE=/home/kl/$(KL_WORKSPACE)" | tee -a /etc/environment
+            # echo "KL_BOX_MODE=true" | tee -a /etc/environment
+            # echo "HOST=box" | tee -a /etc/environment
+            # cd /home/kl/$(KL_WORKSPACE)
+            env sshd -D -d
         volumeMounts:
         - mountPath: /home/kl
           name: home-dir

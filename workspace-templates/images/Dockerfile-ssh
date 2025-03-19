@@ -8,7 +8,7 @@ RUN mkdir /var/run/sshd && \
     echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && \
     echo 'PermitUserEnvironment yes' >> /etc/ssh/sshd_config
 
-
+RUN chown 1000:1000 -R /etc/ssh
 
 RUN userdel ubuntu || echo "ubuntu user already deleted"
 RUN groupadd -g 1000 kl && useradd -u 1000 -g 1000 -m kl && usermod -aG sudo kl && chsh -s $(which zsh) kl
