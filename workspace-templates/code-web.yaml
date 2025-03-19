@@ -53,6 +53,7 @@ spec:
               git clone https://github.com/sindresorhus/pure.git "/home/kl/.config/zsh/pure"
               git clone https://github.com/zsh-users/zsh-syntax-highlighting.git  "/home/kl/.config/zsh/zsh-syntax-highlighting"
               cp /tmp/.zshrc /home/kl/.zshrc
+              cp /tmp/.aliasrc /home/kl/.config/aliasrc
             fi
 
             if [ ! -d "/home/kl/.kl" ]; then

@@ -18,10 +18,9 @@ RUN sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid
 
 # RUN mkdir -p "/home/kl/.config/zsh"
 # RUN git clone https://github.com/sindresorhus/pure.git "/home/kl/.config/zsh/pure"
-
 # RUN git clone https://github.com/zsh-users/zsh-syntax-highlighting.git  "/home/kl/.config/zsh/zsh-syntax-highlighting"
 
-# COPY .zshrc .aliasrc /tmp/
+COPY .zshrc .aliasrc /tmp/
 
 # Expose SSH Port
 # EXPOSE 22
