@@ -46,5 +46,5 @@ cd $KL_WORKSPACE
 export PS1='$(kl checkchanges)'"$PS1"
 
 reload () {
-  pkill
+  sudo pkill sshd
 }
