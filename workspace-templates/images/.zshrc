@@ -39,14 +39,6 @@ if [[ -f $ZSH_HIGHLIGHT_PATH ]]; then
 fi
 
 export PATH=$PATH:$HOME/.local/bin
-
-# TMOUT=1
-# if exists $KL_DEPTH has value
-
-# if [[ -z "$KL_DEPTH" && -n "$SSH_TTY" ]]; then
-#   kl shell
-#   exit
-# fi
-
+source /home/kl/.nix-profile/etc/profile.d/nix.sh
 mkdir -p $KL_WORKSPACE
 cd $KL_WORKSPACE
