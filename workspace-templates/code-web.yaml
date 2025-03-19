@@ -1,3 +1,33 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kloudlite
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default
+  name: pod-deleter
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pod-deleter-binding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: kloudlite
+  namespace: default
+roleRef:
+  kind: Role
+  name: pod-deleter
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -10,7 +40,9 @@ spec:
     metadata:
       labels:
         app: code-web-service
+        kloudlite.io/gateway.enabled: "false"
     spec:
+      serviceAccount: kloudlite
       tolerations:
         - key: "kloudlite.io/worknode"
           operator: "Equal"
@@ -21,6 +53,7 @@ spec:
       initContainers:
         - name: init-home-dir
           image: ghcr.io/kloudlite/iac/workspace:latest
+          imagePullPolicy: IfNotPresent
           env:
             - name: KL_WORKSPACE
               value: "workspaces/ws-name"
@@ -34,7 +67,7 @@ spec:
           - "-c"
           - |
             set -e
-            ls /tmp
+            set +x
             if [ ! -d "/nix/store" ]; then
               curl -L https://nixos.org/nix/install | sh
               mkdir -p ~/.config/nix
@@ -74,30 +107,15 @@ spec:
                   team: newteam
                   EOF'
             fi
-          volumeMounts:
-            - mountPath: /home/kl
-              name: home-dir
-            - mountPath: /nix
-              name: nix-dir
-            - mountPath: /env
-              name: containerenv
-        - name: envsetup
-          image: ghcr.io/kloudlite/iac/workspace:latest
-          env:
-            - name: KL_WORKSPACE
-              value: "workspaces/ws-name"
-            - name: HOME
-              value: "/home/kl"
-          command:
-          - "bash"
-          - "-c"
-          - |
-            set -e
-            if [[ -f /home/kl/$KL_WORKSPACE/kl.yaml || -f /home/kl/$KL_WORKSPACE/kl.yml ]]; then
-              cd /home/kl/$KL_WORKSPACE
-              runuser kl -c "PATH=$PATH:/home/kl/.nix-profile/bin /home/kl/.local/bin/kl shell -r >  /env/.env"
-              runuser kl -c "PATH=$PATH:/home/kl/.nix-profile/bin /home/kl/.local/bin/kl shell -r"
+            
+            if [ ! -f "/home/kl/.local/bin/kubectl" ]; then
+                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                chmod +x /home/kl/.local/bin/kubectl
             fi
+
+            cd /home/kl/$KL_WORKSPACE
+            PATH=$PATH:/home/kl/.nix-profile/bin:/home/kl/.local/bin /home/kl/.local/bin/kl shell -r >  /env/.env
+            
           volumeMounts:
             - mountPath: /home/kl
               name: home-dir
@@ -105,14 +123,23 @@ spec:
               name: nix-dir
             - mountPath: /env
               name: containerenv
+        
       
       containers:
       - name: ssh
         image: ghcr.io/kloudlite/iac/workspace:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
           - name: KL_WORKSPACE
             value: "workspaces/ws-name"
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
         ports:
         - containerPort: 22
         command:
@@ -123,7 +150,20 @@ spec:
             cat /env/.env >> /etc/environment
             echo "HOST=box" >> /etc/environment
             echo "KL_WORKSPACE=$(KL_WORKSPACE)" >> /etc/environment
-            env sshd -D
+            echo KUBERNETES_PORT_443_TCP_PROTO=$(KUBERNETES_PORT_443_TCP_PROTO) >> /etc/environment
+            echo KUBERNETES_PORT_443_TCP_ADDR=$(KUBERNETES_PORT_443_TCP_ADDR) >> /etc/environment
+            echo KUBERNETES_SERVICE_HOST=$(KUBERNETES_SERVICE_HOST) >> /etc/environment
+            echo KUBERNETES_PORT=$(KUBERNETES_PORT) >> /etc/environment
+            echo KUBERNETES_PORT_443_TCP_PORT=$(KUBERNETES_PORT_443_TCP_PORT) >> /etc/environment
+            echo KUBERNETES_PORT_443_TCP=$(KUBERNETES_PORT_443_TCP) >> /etc/environment
+            echo KUBERNETES_SERVICE_PORT=$(KUBERNETES_SERVICE_PORT) >> /etc/environment
+            echo KUBERNETES_SERVICE_PORT_HTTPS=$(KUBERNETES_SERVICE_PORT_HTTPS) >> /etc/environment
+            echo NAMESPACE=$(NAMESPACE) >> /etc/environment
+            echo POD_NAME=$(POD_NAME) >> /etc/environment
+            env sshd -D &
+            pid=$!
+            trap "kill -9 $pid" TERM INT EXIT
+            wait $pid
         volumeMounts:
         - mountPath: /home/kl
           name: home-dir

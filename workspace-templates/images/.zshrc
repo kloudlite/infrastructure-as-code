@@ -46,5 +46,5 @@ cd $KL_WORKSPACE
 export PS1='$(kl checkchanges)'"$PS1"
 
 reload () {
-  sudo pkill sshd
+  kubectl delete pod/$POD_NAME -n $NAMESPACE
 }
