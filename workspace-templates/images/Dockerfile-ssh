@@ -24,7 +24,7 @@ RUN sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid
 # COPY .zshrc .aliasrc /tmp/
 
 # Expose SSH Port
-EXPOSE 22
+# EXPOSE 22
 
 # Start SSH Daemon
-CMD ["/usr/sbin/sshd", "-D"]
+# CMD ["/usr/sbin/sshd", "-D"]
