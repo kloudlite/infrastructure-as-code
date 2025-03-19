@@ -59,6 +59,8 @@ spec:
               value: "workspaces/ws-name"
             - name: HOME
               value: "/home/kl"
+            - name: KL_BOX_MODE
+              value: "true"
           securityContext:
             runAsUser: 1000
             runAsGroup: 1000
@@ -79,9 +81,9 @@ spec:
             fi
 
             if [ ! -f "/home/kl/.local/bin/kl" ]; then
-                  mkdir -p /home/kl/.local/bin
-                  cd /home/kl/.local/bin
-                  curl https://i.jpillora.com/kloudlite/kl@1.1.71-nightly | bash
+              mkdir -p /home/kl/.local/bin
+              cd /home/kl/.local/bin
+              curl https://i.jpillora.com/kloudlite/kl@v1.1.81-nightly | bash
             fi
 
             if [ ! -d "/home/kl/.config/zsh/pure" ]; then
@@ -101,20 +103,21 @@ spec:
             fi
 
             if [ ! -d "/home/kl/.kl" ]; then
-                  mkdir -p /home/kl/.kl
-                  sh -c 'cat > /home/kl/.kl/kl-session.yaml <<EOF
-                  session: sess-xtfmvde-xz1cj1osaobxeqkwsiyi
-                  team: newteam
-                  EOF'
+              mkdir -p /home/kl/.kl
+              sh -c 'cat > /home/kl/.kl/kl-session.yaml <<EOF
+              session: sess-xtfmvde-xz1cj1osaobxeqkwsiyi
+              team: newteam
+              EOF'
             fi
             
             if [ ! -f "/home/kl/.local/bin/kubectl" ]; then
-                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-                chmod +x /home/kl/.local/bin/kubectl
+              curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+              chmod +x /home/kl/.local/bin/kubectl
             fi
 
             cd /home/kl/$KL_WORKSPACE
             PATH=$PATH:/home/kl/.nix-profile/bin:/home/kl/.local/bin /home/kl/.local/bin/kl shell -r >  /env/.env
+            PATH=$PATH:/home/kl/.nix-profile/bin:/home/kl/.local/bin /home/kl/.local/bin/kl get env >  /env/.connected_env
             
           volumeMounts:
             - mountPath: /home/kl
@@ -132,6 +135,8 @@ spec:
         env:
           - name: KL_WORKSPACE
             value: "workspaces/ws-name"
+          - name: KL_DEVICE_NAME
+            value: "exposed-services.default.svc.cluster.local"
           - name: NAMESPACE
             valueFrom:
               fieldRef:
@@ -147,8 +152,15 @@ spec:
           - -c
           - |
             set -e
+            cat > /etc/resolv.conf <<EOF
+            search env-$(cat /env/.connected_env).svc.cluster.local svc.cluster.local cluster.local
+            nameserver 10.43.0.10
+            options ndots:5
+            EOF
             cat /env/.env >> /etc/environment
             echo "HOST=box" >> /etc/environment
+            echo "KL_DEVICE_NAME=$(KL_DEVICE_NAME)" >> /etc/environment
+            echo "KL_BOX_MODE=true" >> /etc/environment
             echo "KL_WORKSPACE=$(KL_WORKSPACE)" >> /etc/environment
             echo KUBERNETES_PORT_443_TCP_PROTO=$(KUBERNETES_PORT_443_TCP_PROTO) >> /etc/environment
             echo KUBERNETES_PORT_443_TCP_ADDR=$(KUBERNETES_PORT_443_TCP_ADDR) >> /etc/environment

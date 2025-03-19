@@ -8,6 +8,16 @@ spec:
   ports:
   - port: 2222
     targetPort: 22
+    name: ssh
+  - port: 3000
+    targetPort: 3000
+    name: code3000
+  - port: 8080
+    targetPort: 8080
+    name: code8080
+  - port: 4000
+    targetPort: 4000
+    name: code4000
 
 ---
 
@@ -21,3 +31,4 @@ spec:
   ports:
   - port: 8888
     targetPort: 8888
+    name: code8888
