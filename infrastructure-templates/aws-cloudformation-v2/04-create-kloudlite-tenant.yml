@@ -484,6 +484,8 @@ Resources:
           write-kubeconfig-mode: "0644"
           node-label:
             - "kloudlite.io/node.role=worker"
+          node-taint:
+            - kloudlite.io/worknode=node1:NoExecute
 
           kubelet-arg:
             - "system-reserved=cpu=50m,memory=50Mi,ephemeral-storage=2Gi"

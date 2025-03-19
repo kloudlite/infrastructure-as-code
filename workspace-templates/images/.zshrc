@@ -33,7 +33,7 @@ if [[ -f "$HOME/.config/aliasrc" ]]; then
 fi
 
 # zsh syntax highlighting
-ZSH_HIGHLIGHT_PATH="/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+ZSH_HIGHLIGHT_PATH="/home/kl/.config/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 if [[ -f $ZSH_HIGHLIGHT_PATH ]]; then
   source $ZSH_HIGHLIGHT_PATH
 fi
