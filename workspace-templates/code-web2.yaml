@@ -154,28 +154,70 @@ spec:
         securityContext:
           runAsUser: 1000
           runAsGroup: 1000
-      #- name: vscode-server
-      #  image: ghcr.io/kloudlite/iac/vscode-server:latest
-      #  imagePullPolicy: Always
-      #  volumeMounts:
-      #    - mountPath: /home/kl
-      #      name: home-dir
-      #  securityContext:
-      #    runAsUser: 1001
-      #    runAsGroup: 1001
-      #- name: code-server
-      #  image: ghcr.io/kloudlite/iac/code-server:latest
-      #  imagePullPolicy: Always
-      #  volumeMounts:
-      #    - mountPath: /home/kl
-      #      name: home-dir
-      #  securityContext:
-      #    runAsUser: 1001
-      #    runAsGroup: 1001
+      - name: code-server
+        image: ghcr.io/kloudlite/iac/code-server:latest
+        imagePullPolicy: Always
+        env:
+          - name: KL_WORKSPACE
+            value: "/home/kl/workspaces/ws-api"
+          - name: KL_DEVICE_NAME
+            value: "exposed-services2.default.svc.cluster.local"
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: DEPLOYMENT_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['app']
+        volumeMounts:
+        - mountPath: /home/kl
+          name: home-dir
+        - mountPath: /nix
+          name: nix-dir
+        - mountPath: /env
+          name: containerenv
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+      - name: vscode-server
+        image: ghcr.io/kloudlite/iac/vscode-server:latest
+        imagePullPolicy: Always
+        env:
+          - name: KL_WORKSPACE
+            value: "/home/kl/workspaces/ws-api"
+          - name: KL_WORKSPACE_NAME
+            value: "ws-api"
+          - name: KL_DEVICE_NAME
+            value: "exposed-services2.default.svc.cluster.local"
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: DEPLOYMENT_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['app']
+        volumeMounts:
+        - mountPath: /home/kl
+          name: home-dir
+        - mountPath: /nix
+          name: nix-dir
+        - mountPath: /env
+          name: containerenv
+        # - mountPath: /home/kl/.vscode
+        #   name: code-tunnel
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
 
       volumes:
       - name: containerenv
         emptyDir: {}
+
+      # - name: code-tunnel
+      #   hostPath:
+      #     path: /var/user-home/.tunnels/ws-api
       
       - name: home-dir
         hostPath:

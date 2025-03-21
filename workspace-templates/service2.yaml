@@ -54,3 +54,26 @@ spec:
             name: exposed-http2
             port: 
               number: 80
+
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: exposed-http3
+  labels:
+    name: exposed-http3
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: code-server-exposed-services2.tenantc.demo.kloudlite.io
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: exposed-services2
+            port: 
+              number: 8080

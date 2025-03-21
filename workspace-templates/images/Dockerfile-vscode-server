@@ -1,6 +1,6 @@
 FROM ubuntu:24.04
 
-RUN apt update && apt install -y curl
+RUN apt-get update && apt-get install -y git sudo zsh xz-utils curl 
 
 WORKDIR /code
 
@@ -8,8 +8,14 @@ RUN curl -Lk 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alp
 
 RUN tar -xf vscode_cli.tar.gz
 
-RUN useradd -m -s /bin/bash -u 1001 kl
+# Create a non-root user 'kl'
+RUN userdel ubuntu || echo "ubuntu user already deleted"
+RUN groupadd -g 1000 kl && useradd -u 1000 -g 1000 -m kl && usermod -aG sudo kl && chsh -s $(which zsh) kl
+RUN echo "kl ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/kl
 
 USER kl
 
-CMD ["/code/code", "tunnel"]
+COPY vscode-start /vscode-start
+RUN sudo chmod +x /vscode-start
+
+CMD ["zsh", "/vscode-start"]
