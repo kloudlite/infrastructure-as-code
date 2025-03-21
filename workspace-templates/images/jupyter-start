@@ -15,6 +15,7 @@ if [ -f "/env/.env" ]; then
   sudo bash -c "cat /env/.env >> /etc/environment"
 fi
 
+cd $KL_WORKSPACE
 
 /venv/bin/jupyter lab --ip=0.0.0.0 --no-browser --NotebookApp.token='' --NotebookApp.password='' &
 pid=$!
