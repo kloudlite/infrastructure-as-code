@@ -12,6 +12,7 @@ spec:
         app: code-api-service
         kloudlite.io/gateway.enabled: "false"
     spec:
+      hostname: "ws-api"
       serviceAccount: kloudlite
       tolerations:
         - key: "kloudlite.io/worknode"

@@ -17,7 +17,7 @@ fi
 
 cd $KL_WORKSPACE
 
-/code/code tunnel --verbose --name $KL_WORKSPACE_NAME --cli-data-dir /home/kl/.tunnels/$KL_WORKSPACE_NAME --accept-server-license-terms &
+/code/code tunnel --name $KL_WORKSPACE_NAME --cli-data-dir /home/kl/.tunnels/$KL_WORKSPACE_NAME --accept-server-license-terms &
 
 pid=$!
 trap "kill -9 $pid" TERM INT EXIT
