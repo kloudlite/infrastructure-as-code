@@ -206,8 +206,6 @@ spec:
           name: nix-dir
         - mountPath: /env
           name: containerenv
-        # - mountPath: /home/kl/.vscode
-        #   name: code-tunnel
         securityContext:
           runAsUser: 1000
           runAsGroup: 1000
@@ -215,10 +213,6 @@ spec:
       volumes:
       - name: containerenv
         emptyDir: {}
-
-      # - name: code-tunnel
-      #   hostPath:
-      #     path: /var/user-home/.tunnels/ws-api
       
       - name: home-dir
         hostPath:

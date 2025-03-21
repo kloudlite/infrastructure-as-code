@@ -161,57 +161,6 @@ spec:
           name: nix-dir
         - mountPath: /env
           name: containerenv
-      # - name: busybox
-      #   image: ghcr.io/abdheshnayak/box:v1.0.0
-      #   command: ["sleep", "3600"]
-      #   volumeMounts:
-      #     - mountPath: /home/kl
-      #       name: home-dir
-      #   command:
-      #     - bash
-      #     - -c
-      #     - |
-      #       /start.sh
-      #       source /home/kl/.profile
-      #       sudo sh -c 'cat > /home/kl/.kl/kl-extra-data.yaml <<EOF
-      #       baseUrl: https://auth.kloudlite.io
-      #       dnsHostSuffix: khost.dev
-      #       lastUpdateCheck: "2025-02-05T12:18:24.071075127+05:30"
-      #       backupDns: []
-      #       EOF'
-      #       sshd -D
-        # securityContext:
-        #   runAsUser: 1000
-        #   runAsGroup: 1000
-      #- name: jupyter
-      #  image: ghcr.io/kloudlite/iac/jupyter:latest
-      #  imagePullPolicy: Always
-      #  ports:
-      #  - containerPort: 8888
-      #  volumeMounts:
-      #    - mountPath: /home/kl
-      #      name: home-dir
-      #  securityContext:
-      #    runAsUser: 1001
-      #    runAsGroup: 1001
-      #- name: vscode-server
-      #  image: ghcr.io/kloudlite/iac/vscode-server:latest
-      #  imagePullPolicy: Always
-      #  volumeMounts:
-      #    - mountPath: /home/kl
-      #      name: home-dir
-      #  securityContext:
-      #    runAsUser: 1001
-      #    runAsGroup: 1001
-      #- name: code-server
-      #  image: ghcr.io/kloudlite/iac/code-server:latest
-      #  imagePullPolicy: Always
-      #  volumeMounts:
-      #    - mountPath: /home/kl
-      #      name: home-dir
-      #  securityContext:
-      #    runAsUser: 1001
-      #    runAsGroup: 1001
 
       
       volumes:
