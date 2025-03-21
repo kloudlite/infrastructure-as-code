@@ -3,12 +3,12 @@ version: '3'
 tasks:
   build-ssh:
     cmds:
-      - docker build -t ghcr.io/kloudlite/iac/workspace:latest -f Dockerfile-ssh .
+      - docker build --platform linux/amd64 -t ghcr.io/kloudlite/iac/workspace:latest -f Dockerfile-ssh .
       - docker push ghcr.io/kloudlite/iac/workspace:latest
 
   build-jupyter:
     cmds:
-      - docker build -t ghcr.io/kloudlite/iac/jupyter:latest -f Dockerfile-jupyter .
+      - docker build --platform linux/amd64 -t ghcr.io/kloudlite/iac/jupyter:latest -f Dockerfile-jupyter .
       - docker push ghcr.io/kloudlite/iac/jupyter:latest
 
   build-vscode-server:

@@ -8,22 +8,18 @@ RUN mkdir /var/run/sshd && \
     echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && \
     echo 'PermitUserEnvironment yes' >> /etc/ssh/sshd_config
 
-RUN chown 1000:1000 -R /etc/ssh
-
 RUN userdel ubuntu || echo "ubuntu user already deleted"
 RUN groupadd -g 1000 kl && useradd -u 1000 -g 1000 -m kl && usermod -aG sudo kl && chsh -s $(which zsh) kl
 RUN echo "kl ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/kl
 
 RUN sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' /etc/pam.d/sshd
 
-# RUN mkdir -p "/home/kl/.config/zsh"
-# RUN git clone https://github.com/sindresorhus/pure.git "/home/kl/.config/zsh/pure"
-# RUN git clone https://github.com/zsh-users/zsh-syntax-highlighting.git  "/home/kl/.config/zsh/zsh-syntax-highlighting"
-
 COPY .zshrc .aliasrc /tmp/
 
 # Expose SSH Port
 # EXPOSE 22
+COPY sshd-start /sshd-start
+RUN chmod +x /sshd-start
 
 # Start SSH Daemon
-# CMD ["/usr/sbin/sshd", "-D"]
+CMD ["zsh","/sshd-start"]

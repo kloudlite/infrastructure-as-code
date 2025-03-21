@@ -1,0 +1,22 @@
+set -e
+if [ -f "/env/.connected_env" ]; then
+cat > /tmp/resolv.conf <<EOF
+search env-$(cat /env/.connected_env).svc.cluster.local svc.cluster.local cluster.local
+nameserver 10.43.0.10
+options ndots:5
+EOF
+sudo cp /tmp/resolv.conf /etc/resolv.conf
+fi
+
+export HOST=box
+export KL_BOX_MODE=true
+if [ -f "/env/.env" ]; then
+  . /env/.env
+  sudo bash -c "cat /env/.env >> /etc/environment"
+fi
+
+
+/venv/bin/jupyter lab --ip=0.0.0.0 --no-browser --NotebookApp.token='' --NotebookApp.password='' &
+pid=$!
+trap "kill -9 $pid" TERM INT EXIT
+wait $pid

@@ -38,13 +38,16 @@ if [[ -f $ZSH_HIGHLIGHT_PATH ]]; then
   source $ZSH_HIGHLIGHT_PATH
 fi
 
+# . /env/.env
+
 export PATH=$PATH:$HOME/.local/bin
 source /home/kl/.nix-profile/etc/profile.d/nix.sh
 mkdir -p $KL_WORKSPACE
 cd $KL_WORKSPACE
-
 export PS1='$(kl checkchanges)'"$PS1"
 
 reload () {
-  kubectl delete pod/$POD_NAME -n $NAMESPACE
+  echo "Reloading..."
+  kubectl rollout restart deployment $DEPLOYMENT_NAME >/dev/null 2>&1
+  kubectl rollout status deployment $DEPLOYMENT_NAME --watch >/dev/null 2>&1
 }
