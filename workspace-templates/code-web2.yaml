@@ -1,48 +1,15 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: kloudlite
-  namespace: default
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  namespace: default
-  name: pod-deleter
-rules:
-- apiGroups: ["apps"]
-  resources: ["deployments"]
-  verbs: ["get", "list", "watch", "update", "patch"] # "update" and "patch" are required for rollout
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"] # Only allow viewing, not deleting
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: pod-deleter-binding
-  namespace: default
-subjects:
-- kind: ServiceAccount
-  name: kloudlite
-  namespace: default
-roleRef:
-  kind: Role
-  name: pod-deleter
-  apiGroup: rbac.authorization.k8s.io
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: code-web-service
+  name: code-api-service
 spec:
   selector:
     matchLabels:
-      app: code-web-service
+      app: code-api-service
   template:
     metadata:
       labels:
-        app: code-web-service
+        app: code-api-service
         kloudlite.io/gateway.enabled: "false"
     spec:
       serviceAccount: kloudlite
@@ -59,7 +26,7 @@ spec:
           imagePullPolicy: Always
           env:
             - name: KL_WORKSPACE
-              value: "workspaces/ws-name"
+              value: "workspaces/ws-api"
             - name: HOME
               value: "/home/kl"
             - name: KL_BOX_MODE
@@ -139,21 +106,19 @@ spec:
         imagePullPolicy: Always
         env:
           - name: KL_WORKSPACE
-            value: "/home/kl/workspaces/ws-name"
+            value: "/home/kl/workspaces/ws-api"
           - name: KL_DEVICE_NAME
-            value: "exposed-services.default.svc.cluster.local"
-          - name: DEPLOYMENT_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.labels['app']
+            value: "exposed-services2.default.svc.cluster.local"
           - name: NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-
+          - name: DEPLOYMENT_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['app']
         ports:
         - containerPort: 22
-            
         volumeMounts:
         - mountPath: /home/kl
           name: home-dir
@@ -161,39 +126,34 @@ spec:
           name: nix-dir
         - mountPath: /env
           name: containerenv
-      # - name: busybox
-      #   image: ghcr.io/abdheshnayak/box:v1.0.0
-      #   command: ["sleep", "3600"]
-      #   volumeMounts:
-      #     - mountPath: /home/kl
-      #       name: home-dir
-      #   command:
-      #     - bash
-      #     - -c
-      #     - |
-      #       /start.sh
-      #       source /home/kl/.profile
-      #       sudo sh -c 'cat > /home/kl/.kl/kl-extra-data.yaml <<EOF
-      #       baseUrl: https://auth.kloudlite.io
-      #       dnsHostSuffix: khost.dev
-      #       lastUpdateCheck: "2025-02-05T12:18:24.071075127+05:30"
-      #       backupDns: []
-      #       EOF'
-      #       sshd -D
-        # securityContext:
-        #   runAsUser: 1000
-        #   runAsGroup: 1000
-      #- name: jupyter
-      #  image: ghcr.io/kloudlite/iac/jupyter:latest
-      #  imagePullPolicy: Always
-      #  ports:
-      #  - containerPort: 8888
-      #  volumeMounts:
-      #    - mountPath: /home/kl
-      #      name: home-dir
-      #  securityContext:
-      #    runAsUser: 1001
-      #    runAsGroup: 1001
+      - name: jupyter
+        image: ghcr.io/kloudlite/iac/jupyter:latest
+        imagePullPolicy: Always
+        env:
+          - name: KL_WORKSPACE
+            value: "/home/kl/workspaces/ws-api"
+          - name: KL_DEVICE_NAME
+            value: "exposed-services2.default.svc.cluster.local"
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: DEPLOYMENT_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['app']
+        ports:
+        - containerPort: 8888
+        volumeMounts:
+        - mountPath: /home/kl
+          name: home-dir
+        - mountPath: /nix
+          name: nix-dir
+        - mountPath: /env
+          name: containerenv
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
       #- name: vscode-server
       #  image: ghcr.io/kloudlite/iac/vscode-server:latest
       #  imagePullPolicy: Always
@@ -213,7 +173,6 @@ spec:
       #    runAsUser: 1001
       #    runAsGroup: 1001
 
-      
       volumes:
       - name: containerenv
         emptyDir: {}
