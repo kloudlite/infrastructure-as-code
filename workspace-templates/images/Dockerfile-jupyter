@@ -30,4 +30,4 @@ RUN sudo chmod +x /jupyter-start
 
 # Command to start Jupyter Notebook
 
-ENTRYPOINT [ "bash","/jupyter-start" ]
+ENTRYPOINT [ "zsh","/jupyter-start" ]
