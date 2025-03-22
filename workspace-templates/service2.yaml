@@ -18,6 +18,9 @@ spec:
   - port: 4000
     targetPort: 4000
     name: code4000
+  - port: 54535
+    targetPort: 54535
+    name: ttyd
 
 ---
 
@@ -77,3 +80,26 @@ spec:
             name: exposed-services2
             port: 
               number: 8080
+
+---
+
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: exposed-ttyd
+  labels:
+    name: exposed-ttyd
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: ttyd-exposed-services2.tenantc.demo.kloudlite.io
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: exposed-services2
+            port: 
+              number: 54535

@@ -1,8 +1,9 @@
-# If not running interactively, don't do anything
-case $- in
-    *i*) ;;
-      *) return;;
-esac
+export CLICOLOR=1
+export LSCOLORS=ExGxBxDxCxEgEdxbxgxcxd
+alias ll="ls -alG"
+alias ls='ls --color'
+
+eval "$(starship init zsh)"
 
 HISTCONTROL=ignoreboth
 
@@ -21,15 +22,10 @@ setopt hist_verify            # show command with history expansion to user befo
 
 setopt hist_reduce_blanks     # removing blank lines from the history
 
-# zsh pure prompt setup
-fpath+=($HOME/.config/zsh/pure)
-autoload -U promptinit; promptinit
-prompt pure
-zstyle :prompt:pure:environment:nix-shell show no
 
-# zsh aliases
-if [[ -f "$HOME/.config/aliasrc" ]]; then
-  source "$HOME/.config/aliasrc"
+ZSH_AUTO_SUGGESTIONS_PATH="/home/kl/.config/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
+if [[ -f $ZSH_AUTO_SUGGESTIONS_PATH ]]; then
+  source $ZSH_AUTO_SUGGESTIONS_PATH
 fi
 
 # zsh syntax highlighting
@@ -38,13 +34,14 @@ if [[ -f $ZSH_HIGHLIGHT_PATH ]]; then
   source $ZSH_HIGHLIGHT_PATH
 fi
 
-# . /env/.env
-
 export PATH=$PATH:$HOME/.local/bin
 source /home/kl/.nix-profile/etc/profile.d/nix.sh
 mkdir -p $KL_WORKSPACE
 cd $KL_WORKSPACE
-export PS1='$(kl checkchanges)'"$PS1"
+
+precmd() {
+ export P=$(kl checkchanges)
+}
 
 reload () {
   echo "Reloading..."

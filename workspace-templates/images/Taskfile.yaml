@@ -6,6 +6,11 @@ tasks:
       - docker build --platform linux/amd64 -t ghcr.io/kloudlite/iac/workspace:latest -f Dockerfile-ssh .
       - docker push ghcr.io/kloudlite/iac/workspace:latest
 
+  build-tty:
+    cmds:
+      - docker build --platform linux/amd64 -t ghcr.io/kloudlite/iac/ttyd:latest -f Dockerfile-ttyd .
+      - docker push ghcr.io/kloudlite/iac/ttyd:latest
+
   build-jupyter:
     cmds:
       - docker build --platform linux/amd64 -t ghcr.io/kloudlite/iac/jupyter:latest -f Dockerfile-jupyter .

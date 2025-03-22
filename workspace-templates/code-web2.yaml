@@ -58,20 +58,24 @@ spec:
               curl https://i.jpillora.com/kloudlite/kl@v1.1.87-nightly | bash
             fi
 
-            if [ ! -d "/home/kl/.config/zsh/pure" ]; then
-              mkdir -p "/home/kl/.config/zsh"
-              git clone https://github.com/sindresorhus/pure.git "/home/kl/.config/zsh/pure"
-            fi
-
-            if [ ! -d "/home/kl/.config/zsh/zsh-syntax-highlighting" ]; then
-              mkdir -p "/home/kl/.config/zsh"
-              git clone https://github.com/zsh-users/zsh-syntax-highlighting.git  "/home/kl/.config/zsh/zsh-syntax-highlighting"
-            fi
 
             if [ ! -f "/home/kl/.zshrc" ]; then
               mkdir -p "/home/kl/.config/zsh"
               cp /tmp/.zshrc /home/kl/.zshrc
               cp /tmp/.aliasrc /home/kl/.config/aliasrc
+            fi
+            if [ ! -f "/home/kl/.local/bin/starship" ]; then
+              curl -sS https://starship.rs/install.sh | sh -s -- -y -b /home/kl/.local/bin
+            fi
+
+            if [ ! -d "/home/kl/.config/zsh/zsh-autosuggestions" ]; then
+              mkdir -p "/home/kl/.config/zsh"
+              git clone https://github.com/zsh-users/zsh-autosuggestions
+            fi
+
+            if [ ! -d "/home/kl/.config/zsh/zsh-syntax-highlighting" ]; then
+              mkdir -p "/home/kl/.config/zsh"
+              git clone https://github.com/zsh-users/zsh-syntax-highlighting.git  "/home/kl/.config/zsh/zsh-syntax-highlighting"
             fi
 
             if [ ! -d "/home/kl/.kl" ]; then
@@ -127,6 +131,32 @@ spec:
           name: nix-dir
         - mountPath: /env
           name: containerenv
+      - name: ttyd
+        image: ghcr.io/kloudlite/iac/ttyd:latest
+        imagePullPolicy: Always
+        env:
+          - name: KL_WORKSPACE
+            value: "/home/kl/workspaces/ws-api"
+          - name: KL_DEVICE_NAME
+            value: "exposed-services2.default.svc.cluster.local"
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: DEPLOYMENT_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['app']
+        ports:
+        - containerPort: 54535
+        volumeMounts:
+        - mountPath: /home/kl
+          name: home-dir
+        - mountPath: /nix
+          name: nix-dir
+        - mountPath: /env
+          name: containerenv
+      
       - name: jupyter
         image: ghcr.io/kloudlite/iac/jupyter:latest
         imagePullPolicy: Always

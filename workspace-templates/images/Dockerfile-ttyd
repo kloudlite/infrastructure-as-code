@@ -16,10 +16,13 @@ RUN sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid
 
 COPY .zshrc .aliasrc /tmp/
 
+COPY ttyd-start /ttyd-start
+RUN chmod +x /ttyd-start
+
+USER kl
 # Expose SSH Port
 # EXPOSE 22
-COPY sshd-start /sshd-start
-RUN chmod +x /sshd-start
+
 
 # Start SSH Daemon
-CMD ["zsh","/sshd-start"]
+CMD ["zsh","/ttyd-start"]
