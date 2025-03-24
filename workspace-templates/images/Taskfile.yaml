@@ -25,3 +25,11 @@ tasks:
     cmds:
       - docker build -t ghcr.io/kloudlite/iac/code-server:latest -f Dockerfile-code-server .
       - docker push ghcr.io/kloudlite/iac/code-server:latest
+
+  build-all:
+    cmds:
+      - task: build-ssh
+      - task: build-tty
+      - task: build-jupyter
+      - task: build-vscode-server
+      - task: build-code-server
