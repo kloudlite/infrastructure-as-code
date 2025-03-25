@@ -698,6 +698,94 @@ Resources:
           install_k3s
 
           debug "################# execution finished at $(date) ######################"
+  WorkerNode2:
+    Type: AWS::EC2::Instance
+    DependsOn: MasterNode1
+    Properties:
+      InstanceType: c6a.2xlarge
+      KeyName: !Ref SSHKeyPair
+      # ImageId: 'ami-00bb6a80f01f03502' #ubuntu image
+      ImageId: "ami-05c179eced2eb9b5b" # Amazon Linux 2023 AMI 2023.6.20250303.0 x86_64 HVM kernel-6.1
+      SubnetId: !Ref PublicSubnetID
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      IamInstanceProfile: !Ref InstanceProfile
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-worker-node-1'
+
+      UserData:
+        Fn::Base64: !Sub |
+          #! /usr/bin/env bash
+
+          KLOUDLITE_CONFIG_DIRECTORY=/etc/kloudlite
+
+          ## terraform params
+          K3S_SERVER_HOST=${MasterNode1.PrivateIp}
+          K3S_SERVER_TOKEN=$(aws ssm get-parameter \
+              --name "${K3sServerTokenSecret.Name}" \
+              --with-decryption \
+              --query "Parameter.Value" \
+              --output text)
+          K3S_AGENT_TOKEN=$(aws ssm get-parameter \
+              --name "${K3sAgentTokenSecret.Name}" \
+              --with-decryption \
+              --query "Parameter.Value" \
+              --output text)
+          K3S_VERSION=""
+          NODE_NAME="worker-1"
+          # INTERNAL_NODE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+          # --tf params:END
+
+          debug() {
+            echo "[#] $*" | tee -a "$KLOUDLITE_CONFIG_DIRECTORY/execution.log"
+          }
+
+          debug "ensure kloudlite config directory ($KLOUDLITE_CONFIG_DIRECTORY) exists"
+          mkdir -p "$KLOUDLITE_CONFIG_DIRECTORY"
+
+          debug "################# execution started at $(date) ######################"
+          [ $EUID -ne 0 ] && debug "this script must be run as root. current EUID is $EUID" && exit 1
+
+          create_k3s_config_file() {
+            cat >"$KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml" <<EOF
+          server: "https://$K3S_SERVER_HOST:6443"
+          token: "$K3S_AGENT_TOKEN"
+
+          node-name: "$NODE_NAME"
+
+          tls-san-security: true
+
+          flannel-backend: "wireguard-native"
+          write-kubeconfig-mode: "0644"
+          node-label:
+            - "kloudlite.io/node.role=worker"
+
+          kubelet-arg:
+            - "system-reserved=cpu=50m,memory=50Mi,ephemeral-storage=2Gi"
+            - "kube-reserved=cpu=100m,memory=256Mi"
+            - "eviction-hard=nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%"
+          EOF
+
+            mkdir -p /etc/rancher/k3s
+            ln -sf $KLOUDLITE_CONFIG_DIRECTORY/k3s.yaml /etc/rancher/k3s/config.yaml
+          }
+
+          install_k3s() {
+            debug "installing k3s"
+            export INSTALL_K3S_CHANNEL="stable"
+            export INSTALL_K3S_SKIP_SELINUX_RPM="true"
+
+            if [ -n "$K3S_VERSION" ]; then
+              export INSTALL_K3S_VERSION="$K3S_VERSION"
+            fi
+            curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="agent" sh -
+          }
+
+          create_k3s_config_file
+          install_k3s
+
+          debug "################# execution finished at $(date) ######################"
 
 Outputs:
   NLBDNSName:
