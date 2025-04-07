@@ -3,8 +3,10 @@ version: '3'
 tasks:
   build-ssh:
     cmds:
-      - docker build --platform linux/amd64 -t ghcr.io/kloudlite/iac/workspace:latest -f Dockerfile-ssh .
-      - docker push ghcr.io/kloudlite/iac/workspace:latest
+      # - docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/kloudlite/iac/workspace:latest -f Dockerfile-ssh .
+      # - docker buildx build -f ./Dockerfile-ssh --platform linux/amd64,linux/arm64 -t ghcr.io/kloudlite/iac/workspace:latest --output=type=image,compression=zstd,force-compression=true,compression-level=12,push=true .
+      - docker buildx build -f ./Dockerfile-ssh --platform linux/amd64 -t ghcr.io/kloudlite/iac/workspace:latest --output=type=image,compression=zstd,force-compression=true,compression-level=12,push=true .
+
 
   build-tty:
     cmds:
@@ -25,7 +27,6 @@ tasks:
     cmds:
       - docker build -t ghcr.io/kloudlite/iac/code-server:latest -f Dockerfile-code-server .
       - docker push ghcr.io/kloudlite/iac/code-server:latest
-
   build-all:
     cmds:
       - task: build-ssh

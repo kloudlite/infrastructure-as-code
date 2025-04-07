@@ -188,6 +188,15 @@ Resources:
                   - ssm:DeleteParameter
                 Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/stack-${AWS::StackName}/*
 
+        # IAM pass role, needed for running it inside terraform jobs with IAM Instance Profile
+        - PolicyName: AllowPassRole
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/*  # Adjust as needed
+
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -421,12 +430,40 @@ Resources:
             debug "installed k9s"
           }
 
+          create_cluster_params_secret() {
+            debug "creating cluster params secret"
+            cat > secret.yml <<EOF
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: cluster-params
+            namespace: kube-system
+          stringData:
+            cluster-params.yml: |+
+              k3s_server_host: "$INTERNAL_NODE_IP"
+              k3s_server_token: "$K3S_SERVER_TOKEN"
+              k3s_version: "$K3S_AGENT_TOKEN"
+
+              aws_vpc_id: "${VPC}"
+
+              aws_nlb_dns_host: "${NetworkLoadBalancer.DNSName}"
+              aws_security_group_ids:
+                - "${SecurityGroup.Id}"
+              aws_iam_instance_profile_name: "${InstanceProfile}"
+          EOF
+
+            debug "created cluster params secret"
+            k3s kubectl apply -f ./secret.yml
+            debug "applied cluster params secret"
+          }
+
           create_k3s_config_file
           install_k3s
           ensure_kubernetes_is_ready
           install_helm_plugin
           install_aws_stack
           install_k9s
+          create_cluster_params_secret
 
           debug "################# execution finished at $(date) ######################"
 
@@ -444,7 +481,7 @@ Resources:
       IamInstanceProfile: !Ref InstanceProfile
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-master-node-2
+          Value: !Sub ${AWS::StackName}-worker-node-1
 
       UserData: !Base64
         Fn::Sub: |

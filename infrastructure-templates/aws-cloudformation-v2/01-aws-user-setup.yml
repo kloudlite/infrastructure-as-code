@@ -18,6 +18,29 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonEC2FullAccess
         - arn:aws:iam::aws:policy/AmazonRoute53FullAccess
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore # SSM core permissions
+      Policies:
+        - PolicyName: SSMParameterStoreAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                  - ssm:PutParameter
+                  - ssm:DeleteParameter
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/stack-${AWS::StackName}/*
+
+        # IAM pass role, needed for running it inside terraform jobs with IAM Instance Profile
+        - PolicyName: AllowPassRole
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/*  # Adjust as needed
 
   # IAM User Definition
   kloudliteUser:

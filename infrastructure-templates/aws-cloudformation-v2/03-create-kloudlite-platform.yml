@@ -41,6 +41,36 @@ Resources:
           ToPort: 443
           CidrIp: 0.0.0.0/0
 
+        - IpProtocol: tcp
+          FromPort: 6443
+          ToPort: 6443
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: udp
+          FromPort: 31820
+          ToPort: 31820
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: udp
+          FromPort: 31821
+          ToPort: 31821
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: udp
+          FromPort: 31822
+          ToPort: 31822
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: udp
+          FromPort: 31823
+          ToPort: 31823
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: udp
+          FromPort: 31824
+          ToPort: 31824
+          CidrIp: 0.0.0.0/0
+
   # Security Group (internal access only)
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -58,10 +88,37 @@ Resources:
           ToPort: 443
           SourceSecurityGroupId: !Ref NLBSecurityGroup
 
+        - IpProtocol: udp
+          FromPort: 31820
+          ToPort: 31820
+          SourceSecurityGroupId: !Ref NLBSecurityGroup
+
+        - IpProtocol: udp
+          FromPort: 31821
+          ToPort: 31821
+          SourceSecurityGroupId: !Ref NLBSecurityGroup
+
+        - IpProtocol: udp
+          FromPort: 31822
+          ToPort: 31822
+          SourceSecurityGroupId: !Ref NLBSecurityGroup
+
+        - IpProtocol: udp
+          FromPort: 31823
+          ToPort: 31823
+          SourceSecurityGroupId: !Ref NLBSecurityGroup
+
+        - IpProtocol: udp
+          FromPort: 31824
+          ToPort: 31824
+          SourceSecurityGroupId: !Ref NLBSecurityGroup
+
         - IpProtocol: tcp
           FromPort: 6443
           ToPort: 6443
-          CidrIp: 10.0.0.0/16    # VPC internal only
+          # CidrIp: 10.0.0.0/16    # VPC internal only
+          CidrIp: 0.0.0.0/0    # VPC internal only
+          # SourceSecurityGroupId: !Ref NLBSecurityGroup
 
         # for etcd across nodes [source](https://docs.k3s.io/installation/requirements#networking)
         - IpProtocol: tcp
@@ -133,6 +190,90 @@ Resources:
         - Id: !Ref MasterNode2
         - Id: !Ref MasterNode3
 
+  NLBTargetGroupK8s:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 6443
+      Protocol: TCP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckProtocol: TCP
+      HealthCheckPort: 80
+      Targets:
+        - Id: !Ref MasterNode1
+        - Id: !Ref MasterNode2
+        - Id: !Ref MasterNode3
+
+  NLBTargetGroupWireguard:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 31820
+      Protocol: UDP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckProtocol: TCP
+      HealthCheckPort: 80
+      Targets:
+        - Id: !Ref MasterNode1
+        - Id: !Ref MasterNode2
+        - Id: !Ref MasterNode3
+
+  NLBTargetGroupWireguard1:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 31821
+      Protocol: UDP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckProtocol: TCP
+      HealthCheckPort: 80
+      Targets:
+        - Id: !Ref MasterNode1
+        - Id: !Ref MasterNode2
+        - Id: !Ref MasterNode3
+
+  NLBTargetGroupWireguard2:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 31822
+      Protocol: UDP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckProtocol: TCP
+      HealthCheckPort: 80
+      Targets:
+        - Id: !Ref MasterNode1
+        - Id: !Ref MasterNode2
+        - Id: !Ref MasterNode3
+
+  NLBTargetGroupWireguard3:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 31823
+      Protocol: UDP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckProtocol: TCP
+      HealthCheckPort: 80
+      Targets:
+        - Id: !Ref MasterNode1
+        - Id: !Ref MasterNode2
+        - Id: !Ref MasterNode3
+
+  NLBTargetGroupWireguard4:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 31824
+      Protocol: UDP
+      VpcId: !Ref VPC
+      TargetType: instance
+      HealthCheckProtocol: TCP
+      HealthCheckPort: 80
+      Targets:
+        - Id: !Ref MasterNode1
+        - Id: !Ref MasterNode2
+        - Id: !Ref MasterNode3
+
   NLBListenerHTTP:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -152,6 +293,66 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref NLBTargetGroupHTTPS
+
+  NLBListenerK8s:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 6443
+      Protocol: TCP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroupHTTPS
+
+  NLBListenerWireguard:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 31820
+      Protocol: UDP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroupWireguard
+
+  NLBListenerWireguard1:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 31821
+      Protocol: UDP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroupWireguard1
+
+  NLBListenerWireguard2:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 31822
+      Protocol: UDP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroupWireguard2
+
+  NLBListenerWireguard3:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 31823
+      Protocol: UDP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroupWireguard3
+
+  NLBListenerWireguard4:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 31824
+      Protocol: UDP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroupWireguard4
 
   # Route53WildcardRecord:
   #   Type: "AWS::Route53::RecordSet"

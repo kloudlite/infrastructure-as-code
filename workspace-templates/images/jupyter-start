@@ -1,11 +1,12 @@
+#!/usr/bin/env bash
 set -e
 if [ -f "/env/.connected_env" ]; then
-cat > /tmp/resolv.conf <<EOF
+  cat >/tmp/resolv.conf <<EOF
 search env-$(cat /env/.connected_env).svc.cluster.local svc.cluster.local cluster.local
 nameserver 10.43.0.10
 options ndots:5
 EOF
-sudo cp /tmp/resolv.conf /etc/resolv.conf
+  sudo cp /tmp/resolv.conf /etc/resolv.conf
 fi
 
 export HOST=box
@@ -15,7 +16,9 @@ if [ -f "/env/.env" ]; then
   sudo bash -c "cat /env/.env >> /etc/environment"
 fi
 
-cd $KL_WORKSPACE
+[ -z "$KL_WORKSPACE_DIR" ] && echo "env var: KL_WORKSPACE_DIR is missing" && exit 1
+
+cd "$KL_WORKSPACE_DIR"
 
 if [ ! -d "./.venv" ]; then
   python3 -m venv .venv

@@ -131,6 +131,7 @@ spec:
           name: nix-dir
         - mountPath: /env
           name: containerenv
+
       - name: ttyd
         image: ghcr.io/kloudlite/iac/ttyd:latest
         imagePullPolicy: Always
@@ -185,6 +186,7 @@ spec:
         securityContext:
           runAsUser: 1000
           runAsGroup: 1000
+
       - name: code-server
         image: ghcr.io/kloudlite/iac/code-server:latest
         imagePullPolicy: Always
@@ -211,6 +213,7 @@ spec:
         securityContext:
           runAsUser: 1000
           runAsGroup: 1000
+
       - name: vscode-server
         image: ghcr.io/kloudlite/iac/vscode-server:latest
         imagePullPolicy: Always
@@ -247,6 +250,7 @@ spec:
       - name: home-dir
         hostPath:
           path: /var/user-home/
+
       - name: nix-dir
         hostPath:
           path: /var/nix-dir/
