@@ -2,6 +2,12 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'kloudlite platform installation'
 
 Parameters:
+  DomainName:
+    Type: String
+    Description: The domain name for the hosted zone (e.g., example.com)
+    AllowedPattern: ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$
+    ConstraintDescription: Must be a valid domain name
+
   VPC:
     Type: String
     Description: "VPC ID to use"
@@ -24,6 +30,12 @@ Parameters:
     Default: v1.1.6-nightly
 
 Resources:
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref DomainName
+      HostedZoneConfig:
+        Comment: !Sub 'Hosted zone for ${DomainName}'
    # Security Groups
   NLBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -354,15 +366,15 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref NLBTargetGroupWireguard4
 
-  # Route53WildcardRecord:
-  #   Type: "AWS::Route53::RecordSet"
-  #   Properties:
-  #     HostedZoneName: !Sub "${NetworkLoadBalancer.DNSName}."  # Replace with your domain name
-  #     Name: !Sub "*.${NetworkLoadBalancer.DNSName}"  # Wildcard subdomain
-  #     Type: "A"
-  #     AliasTarget:
-  #       HostedZoneId: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
-  #       DNSName: !GetAtt NetworkLoadBalancer.DNSName
+  ConsoleDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      Name: !Sub 'console.${DomainName}'
+      Type: A
+      AliasTarget:
+        HostedZoneId: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
+        DNSName: !GetAtt NetworkLoadBalancer.DNSName
 
   # IAM Role for EC2 managment, backups and SSM access
   InstanceRole:
@@ -1016,3 +1028,10 @@ Outputs:
   MasterNode3PublicIp:
     Description: Public IP of k3s master 3
     Value: !GetAtt MasterNode3.PublicIp
+
+  HostedZoneId:
+    Description: The Hosted Zone ID
+    Value: !Ref HostedZone
+  NameServers:
+    Description: Name servers for the hosted zone
+    Value: !Join [", ", !GetAtt HostedZone.NameServers]
