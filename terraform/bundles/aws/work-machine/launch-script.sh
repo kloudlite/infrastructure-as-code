@@ -22,6 +22,23 @@ while [ "$count" -gt 0 ]; do
       mkdir -p "$mountpoint"
       sudo chown 1000:1000 -R $mountpoint
       mount -t xfs "/dev/$DEVICE_NAME" "$mountpoint"
+      
+      # Check if user-home folder exists, if not create it
+      user_home="$mountpoint/user-home"
+      if [ ! -d "$user_home" ]; then
+        mkdir -p "$user_home"
+        chown 1000:1000 -R "$user_home"
+        echo "Created user-home directory at $user_home"
+      fi
+
+      # Check if nix directory exists, if not create it
+      nixdir="$mountpoint/nix"
+      if [ ! -d "$nixdir" ]; then
+        mkdir -p "$nixdir"
+        chown 1000:1000 -R "$nixdir"
+        echo "Created nix directory at $nixdir"
+      fi
+      
       # sleep 3
       # DEVICE_UUID=$(lsblk -OdJ | jq '.blockdevices[] | select(.name == "$DEVICE_NAME") | .uuid' -r)
       # echo "UUID=$DEVICE_UUID $mountpoint xfs defaults,nofail 0 2" | sudo tee -a /etc/fstab
