@@ -405,6 +405,18 @@ Resources:
                   - ssm:DeleteParameter
                 Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/stack-${AWS::StackName}/*"
 
+        - PolicyName: IAMPassRole
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: arn:aws:iam::${AWS:AccountId}:role/${AWS::StackName}-InstanceRole-*
+                Condition:
+                  StringEqualsIfExists:
+                    iam:PassedToService: ec2.amazonaws.com
+
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -911,6 +923,7 @@ Resources:
           install_k3s
 
           debug "################# execution finished at $(date) ######################"
+
   WorkerNode2:
     Type: AWS::EC2::Instance
     DependsOn: MasterNode1
