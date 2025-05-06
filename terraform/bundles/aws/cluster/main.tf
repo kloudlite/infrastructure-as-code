@@ -141,10 +141,10 @@ module "ec2-nodes" {
 
   availability_zone = each.value.availability_zone
   # iam_instance_profile = aws_iam_instance_profile.instance_profile.name
-  iam_instance_profile = var.master_node_iam_instance_profile
-  root_volume_size     = each.value.root_volume_size
-  root_volume_type     = each.value.root_volume_type
-  ssh_key_name         = aws_key_pair.ssh_key_pair.key_name
+  # iam_instance_profile = var.master_node_iam_instance_profile
+  root_volume_size = each.value.root_volume_size
+  root_volume_type = each.value.root_volume_type
+  ssh_key_name     = aws_key_pair.ssh_key_pair.key_name
 
   user_data_base64 = base64encode(
     templatefile("${path.module}/launch-script.sh", {
