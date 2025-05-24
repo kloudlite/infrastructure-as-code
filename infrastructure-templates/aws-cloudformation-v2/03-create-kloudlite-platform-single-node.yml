@@ -503,6 +503,9 @@ Resources:
           export BINARY_DIR="$HOMEDIR/.local/bin"
           export KUBECTL='sudo k3s kubectl'
 
+          mkdir $HOMEDIR/cloud-init
+          pushd $HOMEDIR/cloud-init
+
           aws ssm put-parameter \
             --name "${K3sServerTokenSecret.Name}" \
             --value "$K3S_SERVER_TOKEN" \
@@ -625,6 +628,8 @@ Resources:
             curl -L0 https://github.com/nxtcoder17/go-template/releases/download/v0.1.0/go-template-linux-$arch > $BINARY_DIR/go-template
             chmod +x $BINARY_DIR/go-template
 
+            export PATH=$PATH:$BINARY_DIR
+
             cat > helm-pipeline-values.yaml <<EOF
           release:
             name: "kloudlite-stack"
@@ -709,12 +714,12 @@ Resources:
                 work_queue: true
 
           web_host: "${HostDomain}"
-          kloudlite_release: "v1.1.6-nightly"
+          kloudlite_release: "${KloudliteRelease}"
 
           EOF
 
             curl -L0 https://raw.githubusercontent.com/kloudlite/helm-charts/refs/heads/release-v1.1.6/pipeline/platform.yml > platform.yml
-            go-template --values ./helm-pipeline-values.yaml platform.yml | kubectl apply -f
+            go-template --values ./helm-pipeline-values.yaml platform.yml | kubectl apply -f -
           }
 
           # install_aws_stack() {
@@ -887,9 +892,10 @@ Resources:
           install_k3s
           ensure_kubernetes_is_ready
           install_helm_plugin
-          install_aws_stack
+          # install_aws_stack
           install_k9s
-          install_kloudlite_platform
+          install_kloudlite
+          # install_kloudlite_platform
           bash_aliases_and_kubeconfig
           create_cluster_params_secret
 
