@@ -22,6 +22,10 @@ Parameters:
     Type: String
     Default: c6a.xlarge
 
+  VolumeSize:
+    Type: Number
+    Default: 60
+
   KloudliteRelease:
     Type: String
     Default: v1.1.6-nightly
@@ -352,7 +356,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Properties:
       HostedZoneId: !Ref HostedZone
-      Name: !Sub 'acc-*.${HostDomain}'
+      Name: !Sub '*.${HostDomain}'
       Type: A
       AliasTarget:
         HostedZoneId: !GetAtt NetworkLoadBalancer.CanonicalHostedZoneID
@@ -474,6 +478,13 @@ Resources:
         - Key: Name
           Value: !Sub '${AWS::StackName}-master-1'
 
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda  # still use /dev/xvda or /dev/sda1
+          Ebs:
+            VolumeSize: !Ref VolumeSize
+            VolumeType: gp3
+            DeleteOnTermination: true
+
       UserData:
         Fn::Base64: !Sub | #bash
           #! /usr/bin/env bash
@@ -486,6 +497,11 @@ Resources:
           K3S_VERSION=""
           NODE_NAME="master-1"
           # --tf params:END
+
+          export USERNAME="ec2-user"
+          export HOMEDIR="/home/$USERNAME"
+          export BINARY_DIR="$HOMEDIR/.local/bin"
+          export KUBECTL='sudo k3s kubectl'
 
           aws ssm put-parameter \
             --name "${K3sServerTokenSecret.Name}" \
@@ -592,58 +608,165 @@ Resources:
             debug "installing kloudlite helm plugin"
 
             curl -L0 https://raw.githubusercontent.com/kloudlite/plugin-helm-chart/refs/heads/master/config/crd/bases/plugin-helm-chart.kloudlite.github.com_helmcharts.yaml | k3s kubectl apply -f -
+            curl -L0 https://raw.githubusercontent.com/kloudlite/plugin-helm-chart/refs/heads/master/config/crd/bases/plugin-helm-chart.kloudlite.github.com_helmpipelines.yaml | k3s kubectl apply -f -
 
             curl -L0 https://raw.githubusercontent.com/kloudlite/plugin-helm-chart/refs/heads/master/deploy/k8s/setup.yaml | k3s kubectl apply -f -
 
             debug "installed kloudlite helm plugin"
           }
 
-          install_aws_stack() {
-            debug "installing aws stack helm chart"
-            mkdir -p /etc/kloudlite/manifests
-            pushd /etc/kloudlite/manifests
-            cat > aws-stack.yml <<EOF
-          apiVersion: v1
-          kind: Namespace
-          metadata:
-            name: kloudlite-stack
-          ---
-          apiVersion: plugin-helm-chart.kloudlite.github.com/v1
-          kind: HelmChart
-          metadata:
-            name: aws-stack
-            namespace: kloudlite-stack
-          spec:
-            chart:
-              url: "https://kloudlite.github.io/helm-charts-extras"
-              name: aws-stack
-              version: v1.0.0
+          install_kloudlite() {
+            arch=amd64
+            
+            if [[ "$(uname -m)" == "aarch64" || "$(uname -m)" == "arm64" ]]; then
+              arch=arm64
+            fi
 
-            jobVars:
-              resources:
-                cpu:
-                  max: 200m
-                  min: 200m
-                memory:
-                  max: 400Mi
-                  min: 400Mi
+            curl -L0 https://github.com/nxtcoder17/go-template/releases/download/v0.1.0/go-template-linux-$arch > $BINARY_DIR/go-template
+            chmod +x $BINARY_DIR/go-template
 
-              tolerations:
-              - key: operator
-                value: exists
+            cat > helm-pipeline-values.yaml <<EOF
+          release:
+            name: "kloudlite-stack"
+            namespace: "kloudlite"
 
-            helmValues: {}
+          csi:
+            # aws storage type
+            storage_type: "gp3"
+
+            storage_classes:
+              xfs: sc-xfs
+              ext4: sc-ext4
+
+            nodeSelector: {}
+            tolerations:  []
+
+          cert_manager:
+            cluster_issuer:
+              name: "cluster-issuer"
+              acme:
+                email: "support@kloudlite.io"
+                server: ""
+
+            wildcard_cert:
+              host: "demo.kloudlite.io"
+              secret_name: "wildcard-cert"
+
+            nodeSelector: {}
+            tolerations: []
+
+          ingress_nginx:
+            ingress_class: "nginx"
+
+          nats:
+            nodeSelector: {}
+            tolerations: []
+
+            storage: "5Gi"
+
+            buckets:
+              - name: "auth-session"
+                storage: "file"
+
+              - name: "auth-verify-token"
+                storage: "file"
+
+              - name: auth-reset-token
+                storage: file
+
+              - name: console-cache
+                storage: file
+
+            streams:
+              - name: events
+                subject: 'events.>'
+                max_msg_bytes: "500kB"
+                max_msgs_per_subject: 2
+                work_queue: false
+
+              - name: resource-sync
+                subject: 'resource-sync.>'
+                max_msg_bytes: "500kB"
+                max_msgs_per_subject: 2
+                work_queue: false
+
+              - name: send-to-agent
+                subject: 'send-to-agent.>'
+                max_msg_bytes: "500kB"
+                max_msgs_per_subject: 2
+                work_queue: true
+
+              - name: receive-from-agent
+                subject: 'receive-from-agent.>'
+                max_msg_bytes: "500kB"
+                max_msgs_per_subject: 1
+                work_queue: true
+
+              - name: infra-internal-events
+                subject: 'infra-internal-events.>'
+                max_msg_bytes: "500kB"
+                max_msgs_per_subject: 1
+                work_queue: true
+
+          web_host: "${HostDomain}"
+          kloudlite_release: "v1.1.6-nightly"
+
           EOF
 
-            k3s kubectl apply -f ./aws-stack.yml
-            popd
-            debug "installed aws stack helm chart"
+            curl -L0 https://raw.githubusercontent.com/kloudlite/helm-charts/refs/heads/release-v1.1.6/pipeline/platform.yml > platform.yml
+            go-template --values ./helm-pipeline-values.yaml platform.yml | kubectl apply -f
           }
+
+          # install_aws_stack() {
+          #   debug "installing aws stack helm chart"
+          #   mkdir -p /etc/kloudlite/manifests
+          #   pushd /etc/kloudlite/manifests
+          #   cat > aws-stack.yml <<EOF
+          # apiVersion: v1
+          # kind: Namespace
+          # metadata:
+          #   name: kloudlite-stack
+          # ---
+          # apiVersion: plugin-helm-chart.kloudlite.github.com/v1
+          # kind: HelmChart
+          # metadata:
+          #   name: aws-stack
+          #   namespace: kloudlite-stack
+          # spec:
+          #   chart:
+          #     url: "https://kloudlite.github.io/helm-charts-extras"
+          #     name: aws-stack
+          #     version: v1.0.0
+          #
+          #   jobVars:
+          #     resources:
+          #       cpu:
+          #         max: 200m
+          #         min: 200m
+          #       memory:
+          #         max: 400Mi
+          #         min: 400Mi
+          #
+          #     tolerations:
+          #     - key: operator
+          #       value: exists
+          #
+          #   helmValues:
+          #     wildcardCert:
+          #       host: "${HostDomain}"
+          # EOF
+          #
+          #   k3s kubectl apply -f ./aws-stack.yml
+          #   popd
+          #   debug "installed aws stack helm chart"
+          # }
 
           install_k9s() {
             debug "installing k9s"
             USERHOME=/home/ec2-user
             mkdir -p $USERHOME/.local/bin
+            chown ec2-user $USERHOME/.local
+
             mkdir -p /tmp/x
             pushd /tmp/x
             curl -L0 https://github.com/derailed/k9s/releases/download/v0.40.8/k9s_Linux_amd64.tar.gz > k9s.tar.gz
@@ -655,72 +778,72 @@ Resources:
             debug "installed k9s"
           }
 
-          install_kloudlite_platform() {
-            mkdir -p /etc/kloudlite/manifests
-            pushd /etc/kloudlite/manifests
-            cat >> kloudlite-platform.yml <<EOF 
-          apiVersion: v1
-          kind: Namespace
-          metadata:
-            name: kloudlite-platform
-          ---
-          apiVersion: plugin-helm-chart.kloudlite.github.com/v1
-          kind: HelmChart
-          metadata:
-            name: kloudlite-platform
-            namespace: kloudlite-platform
-          spec:
-            chart:
-              url: https://kloudlite.github.io/helm-charts
-              name: kloudlite-platform
-              version: ${KloudliteRelease}
-            jobVars:
-              resources:
-                cpu:
-                  max: 200m
-                  min: 200m
-                memory:
-                  max: 400Mi
-                  min: 400Mi
-
-              tolerations:
-              - key: operator
-                value: exists
-
-            preInstall: |+
-              kubectl apply -f https://github.com/kloudlite/helm-charts/releases/download/v1.1.6-nightly/crds-all.yml --server-side
-              kubectl apply -f https://raw.githubusercontent.com/kloudlite/plugin-mongodb/refs/heads/master/config/crd/bases/plugin-mongodb.kloudlite.github.com_standaloneservices.yaml
-              kubectl apply -f https://raw.githubusercontent.com/kloudlite/plugin-mongodb/refs/heads/master/config/crd/bases/plugin-mongodb.kloudlite.github.com_standalonedatabases.yaml
-
-            helmValues:
-              # -- kloudlite release version, defaults to `Chart.AppVersion`
-              # @ignored
-              kloudliteRelease: "v1.1.6-nightly"
-
-              # -- base domain
-              baseDomain: "${HostDomain}"
-
-              # -- kloudlite DNS suffix, when left empty, defaults to `dns.<baseDomain>`
-              # -- @ignored
-              kloudliteDNSSuffix: ""
-
-              # -- pod labels, added to all kloudlite pods
-              # -- @ignored
-              podLabels: {}
-
-              # -- pod annotations, added to all kloudlite pods
-              # -- @ignored
-              podAnnotations: {}
-
-              # -- cluster internal DNS name
-              # -- @ignored
-              clusterInternalDNS: "cluster.local"
-          EOF
-
-          k3s kubectl apply -f ./kloudlite-platform.yml
-          popd
-          debug  "installed kloudlite platform"
-          }
+          # install_kloudlite_platform() {
+          #   mkdir -p /etc/kloudlite/manifests
+          #   pushd /etc/kloudlite/manifests
+          #   cat >> kloudlite-platform.yml <<EOF 
+          # apiVersion: v1
+          # kind: Namespace
+          # metadata:
+          #   name: kloudlite-platform
+          # ---
+          # apiVersion: plugin-helm-chart.kloudlite.github.com/v1
+          # kind: HelmChart
+          # metadata:
+          #   name: kloudlite-platform
+          #   namespace: kloudlite-platform
+          # spec:
+          #   chart:
+          #     url: https://kloudlite.github.io/helm-charts
+          #     name: kloudlite-platform
+          #     version: ${KloudliteRelease}
+          #   jobVars:
+          #     resources:
+          #       cpu:
+          #         max: 200m
+          #         min: 200m
+          #       memory:
+          #         max: 400Mi
+          #         min: 400Mi
+          #
+          #     tolerations:
+          #     - key: operator
+          #       value: exists
+          #
+          #   preInstall: |+
+          #     kubectl apply -f https://github.com/kloudlite/helm-charts/releases/download/v1.1.6-nightly/crds-all.yml --server-side
+          #     kubectl apply -f https://raw.githubusercontent.com/kloudlite/plugin-mongodb/refs/heads/master/config/crd/bases/plugin-mongodb.kloudlite.github.com_standaloneservices.yaml
+          #     kubectl apply -f https://raw.githubusercontent.com/kloudlite/plugin-mongodb/refs/heads/master/config/crd/bases/plugin-mongodb.kloudlite.github.com_standalonedatabases.yaml
+          #
+          #   helmValues:
+          #     # -- kloudlite release version, defaults to `Chart.AppVersion`
+          #     # @ignored
+          #     kloudliteRelease: "v1.1.6-nightly"
+          #
+          #     # -- base domain
+          #     baseDomain: "${HostDomain}"
+          #
+          #     # -- kloudlite DNS suffix, when left empty, defaults to `dns.<baseDomain>`
+          #     # -- @ignored
+          #     kloudliteDNSSuffix: ""
+          #
+          #     # -- pod labels, added to all kloudlite pods
+          #     # -- @ignored
+          #     podLabels: {}
+          #
+          #     # -- pod annotations, added to all kloudlite pods
+          #     # -- @ignored
+          #     podAnnotations: {}
+          #
+          #     # -- cluster internal DNS name
+          #     # -- @ignored
+          #     clusterInternalDNS: "cluster.local"
+          # EOF
+          #
+          # k3s kubectl apply -f ./kloudlite-platform.yml
+          # popd
+          # debug  "installed kloudlite platform"
+          # }
 
           bash_aliases_and_kubeconfig() {
             USERNAME="ec2-user"
